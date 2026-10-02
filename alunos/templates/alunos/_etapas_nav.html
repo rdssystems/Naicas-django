@@ -1,0 +1,25 @@
+{% comment %}Progresso do cadastro. Precisa de: aluno (ou None no cadastro novo) e etapa_atual.{% endcomment %}
+<nav class="mb-4" aria-label="Etapas do cadastro">
+    <ol class="list-unstyled d-flex flex-wrap gap-2 mb-0">
+    {% if aluno %}
+        {% for numero, nome, url_name, concluida, disponivel in aluno.etapas %}
+        <li>
+            {% if disponivel %}
+            <a href="{% url url_name aluno.pk %}" class="btn btn-sm {% if numero == etapa_atual %}btn-primary{% elif concluida %}btn-outline-success{% else %}btn-outline-secondary{% endif %}">
+                {% if concluida %}<i class="bi bi-check-circle"></i>{% else %}{{ numero }}.{% endif %} {{ nome }}
+            </a>
+            {% else %}
+            <span class="btn btn-sm btn-outline-secondary disabled" title="Disponível em breve">{{ numero }}. {{ nome }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    {% else %}
+        <li><span class="btn btn-sm btn-primary">1. Dados do aluno</span></li>
+        <li><span class="btn btn-sm btn-outline-secondary disabled">2. Responsável</span></li>
+        <li><span class="btn btn-sm btn-outline-secondary disabled">3. Família e emergência</span></li>
+        <li><span class="btn btn-sm btn-outline-secondary disabled">4. Saúde</span></li>
+        <li><span class="btn btn-sm btn-outline-secondary disabled">5. Anexos</span></li>
+        <li><span class="btn btn-sm btn-outline-secondary disabled">6. Matrícula</span></li>
+    {% endif %}
+    </ol>
+</nav>

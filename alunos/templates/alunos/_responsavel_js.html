@@ -1,0 +1,60 @@
+{% comment %}
+JS do formulário de responsável:
+ - mostra/esconde campos condicionais (data-mostrar-se="campo=valor;outro=valor");
+ - com buscar_url, pré-preenche pelo CPF quando o responsável já existe na rede.
+{% endcomment %}
+<script>
+    (function () {
+        const form = document.getElementById('form_responsavel');
+
+        function valorRadio(nome) {
+            const marcado = form.querySelector(`input[name="${nome}"]:checked`);
+            return marcado ? marcado.value : '';
+        }
+
+        function atualizarCondicionais() {
+            // data-mostrar-se="a=True;b=True": visível só se TODAS as condições valem.
+            form.querySelectorAll('[data-mostrar-se]').forEach(function (bloco) {
+                const visivel = bloco.dataset.mostrarSe.split(';').every(function (condicao) {
+                    const [nome, valor] = condicao.split('=');
+                    return valorRadio(nome) === valor;
+                });
+                bloco.classList.toggle('d-none', !visivel);
+            });
+        }
+        form.addEventListener('change', atualizarCondicionais);
+        atualizarCondicionais();
+
+        {% if buscar_url %}
+        const cpf = document.getElementById('id_cpf');
+        const status = document.getElementById('cpf_status');
+        let ultimo = '';
+        cpf.addEventListener('input', async function () {
+            const digitos = cpf.value.replace(/\D/g, '');
+            if (digitos.length !== 11 || digitos === ultimo) return;
+            ultimo = digitos;
+            try {
+                const resposta = await fetch(`{{ buscar_url }}?cpf=${digitos}`, {headers: {'Accept': 'application/json'}});
+                const json = await resposta.json();
+                if (!json.encontrado) {
+                    status.textContent = 'Responsável novo na rede.';
+                    return;
+                }
+                for (const [campo, valor] of Object.entries(json.dados)) {
+                    const radios = form.querySelectorAll(`input[type="radio"][name="${campo}"]`);
+                    if (radios.length) {
+                        radios.forEach(function (r) { r.checked = (r.value === valor); });
+                        continue;
+                    }
+                    const input = form.querySelector(`[name="${campo}"]`);
+                    if (input) input.value = valor;
+                }
+                atualizarCondicionais();
+                status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Responsável já cadastrado na rede: dados preenchidos. Alterações valem para todos os alunos dele.</span>';
+            } catch (e) {
+                status.textContent = '';
+            }
+        });
+        {% endif %}
+    })();
+</script>

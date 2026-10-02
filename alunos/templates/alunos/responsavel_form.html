@@ -1,0 +1,34 @@
+{% extends "core/base.html" %}
+
+{% block title %}Editar responsável{% endblock %}
+
+{% block content %}
+<a href="{% url 'alunos:etapa_responsaveis' aluno.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Responsáveis de {{ aluno.nome }}</a>
+<h1 class="h4 mt-2 mb-3">Editar {{ vinculo.responsavel.nome }}</h1>
+
+{% include "alunos/_etapas_nav.html" %}
+
+{% if outros_alunos %}
+<div class="alert alert-warning small">
+    <i class="bi bi-people"></i> Esta pessoa também é responsável por {{ outros_alunos }} outro{{ outros_alunos|pluralize }} aluno{{ outros_alunos|pluralize }} da rede.
+    As alterações nos dados dela valem para todos. O grau de parentesco vale só para {{ aluno.nome }}.
+</div>
+{% endif %}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" id="form_responsavel" novalidate>
+            {% csrf_token %}
+            {% include "alunos/_responsavel_campos.html" %}
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'alunos:etapa_responsaveis' aluno.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% include "alunos/_responsavel_js.html" %}
+{% endblock %}

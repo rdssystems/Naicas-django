@@ -44,6 +44,15 @@
     </div>
     {% if is_diretor or is_coordenador %}
     <div class="col-sm-6 col-lg-4">
+        <a href="{% url 'alunos:lista' %}" class="card h-100 text-decoration-none shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-person-vcard fs-3 text-primary"></i>
+                <h2 class="h6 mt-2 mb-1">Alunos</h2>
+                <p class="small text-muted mb-0">Cadastro dos alunos{% if is_coordenador %} da sua unidade{% endif %}.</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-4">
         <a href="{% url 'oficinas:tipos' %}" class="card h-100 text-decoration-none shadow-sm">
             <div class="card-body">
                 <i class="bi bi-tags fs-3 text-primary"></i>

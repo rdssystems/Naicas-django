@@ -1,0 +1,103 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if aluno %}Dados de {{ aluno.nome }}{% else %}Novo aluno{% endif %}{% endblock %}
+
+{% block content %}
+<a href="{% if aluno %}{% url 'alunos:detalhe' aluno.pk %}{% else %}{% url 'alunos:lista' %}{% endif %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {% if aluno %}{{ aluno.nome }}{% else %}Alunos{% endif %}</a>
+<h1 class="h4 mt-2 mb-3">{% if aluno %}Dados do aluno{% else %}Novo aluno{% endif %}</h1>
+
+{% include "alunos/_etapas_nav.html" %}
+
+{% if aluno_existente_visivel %}
+<div class="alert alert-info">
+    Já existe um cadastro com este CPF:
+    <a href="{% url 'alunos:detalhe' aluno_existente_visivel.pk %}" class="alert-link">{{ aluno_existente_visivel.nome }}</a>.
+</div>
+{% endif %}
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% for erro in form.non_field_errors %}<div class="alert alert-danger">{{ erro }}</div>{% endfor %}
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Identificação</h2>
+            <div class="row">
+                {% if form.escola %}<div class="col-md-6">{% include "core/_campo.html" with field=form.escola %}</div>{% endif %}
+                <div class="col-md-6">{% include "core/_campo.html" with field=form.cpf %}</div>
+                <div class="col-md-6">{% include "core/_campo.html" with field=form.nome %}</div>
+                <div class="col-md-6">{% include "core/_campo.html" with field=form.nome_mae %}</div>
+                <div class="col-md-4">{% include "core/_campo.html" with field=form.data_nascimento %}</div>
+                <div class="col-md-4">{% include "core/_campo.html" with field=form.sexo %}</div>
+                <div class="col-md-4">{% include "core/_campo.html" with field=form.nis %}</div>
+                <div class="col-md-6">{% include "core/_campo.html" with field=form.naturalidade %}</div>
+            </div>
+            <h2 class="h6 text-uppercase text-muted mb-3 mt-2">Escolaridade</h2>
+            <div class="row">
+                <div class="col-md-8">{% include "core/_campo.html" with field=form.nome_escola %}</div>
+                <div class="col-md-4">{% include "core/_campo.html" with field=form.ano_escolar %}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <h2 class="h6 text-uppercase text-muted mb-3">Endereço</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    {% include "core/_campo.html" with field=endereco_form.cep %}
+                    <div id="cep_status" class="form-text mt-n2 mb-2"></div>
+                </div>
+                <div class="col-md-8">{% include "core/_campo.html" with field=endereco_form.logradouro %}</div>
+                <div class="col-md-3">{% include "core/_campo.html" with field=endereco_form.numero %}</div>
+                <div class="col-md-9">{% include "core/_campo.html" with field=endereco_form.complemento %}</div>
+                <div class="col-md-5">{% include "core/_campo.html" with field=endereco_form.bairro %}</div>
+                <div class="col-md-5">{% include "core/_campo.html" with field=endereco_form.cidade %}</div>
+                <div class="col-md-2">{% include "core/_campo.html" with field=endereco_form.estado %}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+        <a href="{% if aluno %}{% url 'alunos:detalhe' aluno.pk %}{% else %}{% url 'alunos:lista' %}{% endif %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">{% if aluno %}Salvar{% else %}Salvar e continuar <i class="bi bi-arrow-right"></i>{% endif %}</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Busca o endereço no ViaCEP ao completar o CEP. Os campos continuam
+    // editáveis e só são preenchidos se a busca encontrar o CEP.
+    (function () {
+        const cep = document.getElementById('id_end-cep');
+        const status = document.getElementById('cep_status');
+        const campos = {
+            logradouro: 'id_end-logradouro', bairro: 'id_end-bairro',
+            localidade: 'id_end-cidade', uf: 'id_end-estado',
+        };
+        let ultimo = '';
+        cep.addEventListener('input', async function () {
+            const digitos = cep.value.replace(/\D/g, '');
+            if (digitos.length !== 8 || digitos === ultimo) return;
+            ultimo = digitos;
+            status.textContent = 'Buscando endereço…';
+            try {
+                const resposta = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
+                const dados = await resposta.json();
+                if (dados.erro) {
+                    status.textContent = 'CEP não encontrado. Preencha o endereço manualmente.';
+                    return;
+                }
+                for (const [chave, id] of Object.entries(campos)) {
+                    if (dados[chave]) document.getElementById(id).value = dados[chave];
+                }
+                status.textContent = 'Endereço preenchido pelo CEP. Confira e complete o número.';
+                document.getElementById('id_end-numero').focus();
+            } catch (e) {
+                status.textContent = 'Não foi possível buscar o CEP agora. Preencha manualmente.';
+            }
+        });
+    })();
+</script>
+{% endblock %}

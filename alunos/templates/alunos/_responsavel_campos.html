@@ -1,0 +1,42 @@
+{% comment %}Campos do formulário de responsável, em seções. Precisa de: form.{% endcomment %}
+{% for erro in form.non_field_errors %}<div class="alert alert-danger">{{ erro }}</div>{% endfor %}
+
+<h3 class="h6 text-uppercase text-muted mb-3">Identificação</h3>
+<div class="row">
+    <div class="col-md-4">
+        {% include "core/_campo.html" with field=form.cpf %}
+        <div id="cpf_status" class="form-text mt-n2 mb-2"></div>
+    </div>
+    <div class="col-md-8">{% include "core/_campo.html" with field=form.nome %}</div>
+    <div class="col-md-4">{% include "core/_campo.html" with field=form.grau_parentesco %}</div>
+    <div class="col-md-4">{% include "core/_campo.html" with field=form.data_nascimento %}</div>
+</div>
+
+<h3 class="h6 text-uppercase text-muted mb-3 mt-2">Contato</h3>
+<div class="row">
+    <div class="col-md-4">{% include "core/_campo.html" with field=form.celular %}</div>
+    <div class="col-md-8">{% include "core/_campo.html" with field=form.email %}</div>
+</div>
+
+<h3 class="h6 text-uppercase text-muted mb-3 mt-2">Documento</h3>
+<div class="row">
+    <div class="col-md-4">{% include "core/_campo.html" with field=form.documento_numero %}</div>
+    <div class="col-md-3">{% include "core/_campo.html" with field=form.documento_data_expedicao %}</div>
+    <div class="col-md-3">{% include "core/_campo.html" with field=form.documento_orgao_expedidor %}</div>
+    <div class="col-md-2">{% include "core/_campo.html" with field=form.documento_uf %}</div>
+</div>
+
+<h3 class="h6 text-uppercase text-muted mb-3 mt-2">Trabalho e renda</h3>
+<div class="row">
+    <div class="col-md-4">{% include "core/_campo.html" with field=form.trabalha %}</div>
+    <div class="col-md-4" data-mostrar-se="trabalha=True">{% include "core/_campo.html" with field=form.carteira_assinada %}</div>
+    <div class="col-12" data-mostrar-se="trabalha=True;carteira_assinada=True">
+        <div class="row">
+            <div class="col-md-4">{% include "core/_campo.html" with field=form.ctps_numero %}</div>
+            <div class="col-md-4">{% include "core/_campo.html" with field=form.ctps_serie %}</div>
+        </div>
+    </div>
+    <div class="col-md-4">{% include "core/_campo.html" with field=form.contribui_previdencia %}</div>
+    <div class="col-md-4">{% include "core/_campo.html" with field=form.recebe_beneficio %}</div>
+    <div class="col-md-4" data-mostrar-se="recebe_beneficio=True">{% include "core/_campo.html" with field=form.qual_beneficio %}</div>
+</div>

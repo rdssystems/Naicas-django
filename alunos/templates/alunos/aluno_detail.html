@@ -1,0 +1,61 @@
+{% extends "core/base.html" %}
+{% load naicas %}
+
+{% block title %}{{ aluno.nome }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'alunos:lista' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Alunos</a>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mt-2 mb-3">
+    <div>
+        <h1 class="h4 mb-1">{{ aluno.nome }}
+            {% if aluno.cadastro_completo %}<span class="badge text-bg-success fs-6 align-middle">Cadastro completo</span>
+            {% else %}<span class="badge text-bg-warning fs-6 align-middle">Cadastro incompleto</span>{% endif %}
+        </h1>
+        <div class="text-muted">CPF {{ aluno.cpf|cpf }} · Unidade de cadastro: {{ aluno.escola }}</div>
+    </div>
+</div>
+
+{% include "alunos/_etapas_nav.html" with etapa_atual=0 %}
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 text-uppercase text-muted mb-0">1. Dados do aluno</h2>
+                    <a href="{% url 'alunos:etapa_dados' aluno.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a>
+                </div>
+                <dl class="row mb-0 small">
+                    <dt class="col-5">Nome da mãe</dt><dd class="col-7">{{ aluno.nome_mae }}</dd>
+                    <dt class="col-5">Nascimento</dt><dd class="col-7">{{ aluno.data_nascimento|date:"d/m/Y" }}</dd>
+                    <dt class="col-5">Sexo</dt><dd class="col-7">{{ aluno.get_sexo_display }}</dd>
+                    <dt class="col-5">Naturalidade</dt><dd class="col-7">{{ aluno.naturalidade }}</dd>
+                    <dt class="col-5">NIS</dt><dd class="col-7">{{ aluno.nis|default:"—" }}</dd>
+                    <dt class="col-5">Escola</dt><dd class="col-7">{{ aluno.nome_escola }}</dd>
+                    <dt class="col-5">Ano escolar</dt><dd class="col-7">{{ aluno.get_ano_escolar_display }}</dd>
+                    <dt class="col-5">Endereço</dt>
+                    <dd class="col-7">{% if aluno.endereco %}{{ aluno.endereco }}<br>CEP {{ aluno.endereco.cep|cep }}{% else %}<span class="text-danger">Não informado</span>{% endif %}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 text-uppercase text-muted mb-0">2. Responsáveis</h2>
+                    <a href="{% url 'alunos:etapa_responsaveis' aluno.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Gerenciar</a>
+                </div>
+                {% for vinculo in vinculos %}
+                    <div class="mb-2">
+                        <div class="fw-semibold">{{ vinculo.responsavel.nome }} <span class="badge text-bg-light border">{{ vinculo.get_grau_parentesco_display }}</span></div>
+                        <div class="small text-muted">{{ vinculo.responsavel.celular }}{% if vinculo.responsavel.email %} · {{ vinculo.responsavel.email }}{% endif %}</div>
+                    </div>
+                {% empty %}
+                    <p class="small text-danger mb-0">Nenhum responsável informado.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,43 +1,12 @@
-{% load widget_tweaks %}
 {% comment %}
-Renderiza os campos de um form com Bootstrap.
+Renderiza todos os campos de um form com Bootstrap.
 Uso: {% include "core/_form_campos.html" with form=form %}
+Para layouts próprios, inclua "core/_campo.html" campo a campo.
 {% endcomment %}
 {% for erro in form.non_field_errors %}
     <div class="alert alert-danger">{{ erro }}</div>
 {% endfor %}
 {% for field in form.hidden_fields %}{{ field }}{% endfor %}
 {% for field in form.visible_fields %}
-    <div class="mb-3">
-        {% if field.widget_type == 'checkbox' %}
-            <div class="form-check">
-                {% render_field field class="form-check-input" %}
-                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            </div>
-        {% elif field.widget_type == 'checkboxselectmultiple' %}
-            <div class="form-label">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</div>
-            <div class="border rounded p-2 bg-white{% if field.errors %} border-danger{% endif %}" style="max-height: 14rem; overflow-y: auto;">
-                {% for opcao in field %}
-                    <div class="form-check form-check-inline">
-                        {{ opcao.tag }}
-                        <label class="form-check-label" for="{{ opcao.id_for_label }}">{{ opcao.choice_label }}</label>
-                    </div>
-                {% empty %}
-                    <span class="small text-muted">Nenhuma opção disponível.</span>
-                {% endfor %}
-            </div>
-        {% elif field.field.widget.attrs.type == 'color' %}
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {% render_field field class="form-control form-control-color" %}
-        {% else %}
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
-            {% if field.widget_type == 'select' %}
-                {% if field.errors %}{% render_field field class="form-select is-invalid" %}{% else %}{% render_field field class="form-select" %}{% endif %}
-            {% else %}
-                {% if field.errors %}{% render_field field class="form-control is-invalid" %}{% else %}{% render_field field class="form-control" %}{% endif %}
-            {% endif %}
-        {% endif %}
-        {% for erro in field.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
-        {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
-    </div>
+    {% include "core/_campo.html" with field=field %}
 {% endfor %}

@@ -57,6 +57,13 @@ Construir um novo app Django para o **Naicas**: múltiplas escolas/unidades Naic
 - **Status da oficina é manual** (Coordenador/Diretor). As datas são só referência.
 - **Oficina tem `dias_semana`** (lista de dias, ex.: seg/qua/sex), obrigatório.
 - **Oficinas não são excluídas, só arquivadas** (status `Arquivado`, fora da lista padrão), preservando matrículas e frequência.
+- **Aluno tem unidade de cadastro** (`Aluno.escola`, quem cadastrou). O Coordenador vê (e edita) os alunos cadastrados na unidade dele **e** os matriculados em oficinas dela (a partir da Etapa 5). O Diretor vê todos. O Monitor não acessa o cadastro, só a lista de matriculados das oficinas dele.
+- **CPF do aluno é único na rede.** Se um Coordenador digita o CPF de um aluno de outra unidade, o sistema avisa ("já cadastrado na unidade X") sem mostrar os dados, e esse aluno pode ser matriculado numa oficina da unidade dele (Etapa 5).
+- **Cadastro salvo a cada etapa:** o aluno existe desde a Etapa 1 e aparece como "cadastro incompleto" até completar as obrigatórias. Dá para parar e continuar depois.
+- **Responsável reaproveitado na rede toda pelo CPF:** ao digitar o CPF, os dados são pré-preenchidos. Editar um responsável compartilhado atualiza o cadastro dele para todos os alunos vinculados. O aluno precisa de pelo menos 1 responsável.
+- O `grau_parentesco` fica só em `AlunoResponsavel` (a mesma pessoa pode ser mãe de um aluno e avó de outro).
+- No documento do responsável, o **número também é obrigatório** (o formulário da Prodaub exigia data/órgão/UF mas não o número, o que não faz sentido).
+- Endereço é preenchido na mesma tela da Etapa 1 (model separado `Endereco`).
 - **Regras de acesso centralizadas em `core/acesso.py`** (`NivelAcesso`, `is_diretor`, `filtrar_por_escola`, `pode_acessar_oficina`…). Middleware, mixins e todos os apps usam essas funções, sem reimplementar a regra.
 
 ## 3. Arquitetura multi-unidade + 3 níveis de acesso (o núcleo a replicar)
@@ -191,7 +198,9 @@ Matricula             → FK Aluno, escola, oficina, turno, data_inscricao, stat
 - [x] Infra base criada: Docker Compose, settings via `.env`, `entrypoint.sh`, `atualizar.sh`
 - [x] **Etapa 1 — Fundação:** `EscolaNaica`, `Profile` + Groups, login/logout, middleware, mixins, CRUD de unidades e usuários (Diretor)
 - [x] **Etapa 2 — Oficinas:** `TipoOficina`, `Oficina` (dias da semana, status manual, arquivar), designação de Monitores globais
-- [ ] Etapa 3 — Cadastro do aluno (3a dados/endereço/responsável, 3b família/emergência, 3c saúde)
+- [x] **Etapa 3a — Cadastro do aluno:** dados + endereço (ViaCEP), responsáveis reaproveitados por CPF, visibilidade por unidade de cadastro
+- [ ] Etapa 3b — Família e contatos de emergência
+- [ ] Etapa 3c — Ficha de saúde
 - [ ] Etapa 4 — Anexos
 - [ ] Etapa 5 — Matrícula
 - [ ] Etapa 6 — Frequência
