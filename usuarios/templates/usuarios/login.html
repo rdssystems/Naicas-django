@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Entrar{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-sm-10 col-md-6 col-lg-4">
+        <div class="card shadow-sm mt-4">
+            <div class="card-body p-4">
+                <h1 class="h5 mb-4 text-center">Entrar no Naicas</h1>
+                {% if form.errors %}
+                    <div class="alert alert-danger small">Usuário ou senha incorretos.</div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.username.id_for_label }}">Nome de usuário</label>
+                        {% render_field form.username class="form-control" autofocus="autofocus" %}
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label" for="{{ form.password.id_for_label }}">Senha</label>
+                        {% render_field form.password class="form-control" %}
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Entrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

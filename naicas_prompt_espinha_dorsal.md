@@ -50,6 +50,9 @@ Construir um novo app Django para o **Naicas**: múltiplas escolas/unidades Naic
 - **Monitores são globais (da rede), não de uma unidade:** pela escala, o mesmo Monitor atende oficinas de unidades diferentes. A conta do Monitor tem `Profile.escola = None`, e o escopo dele é definido **pelas oficinas em que foi designado**, não por unidade.
 - **Designação Monitor↔Oficina:** `Oficina.monitores` (M2M com usuários Monitor de qualquer unidade). Quem designa: o **Diretor** (qualquer oficina) e o **Coordenador** (escolhe da lista global de Monitores, mas só designa nas oficinas da própria unidade). É só um vínculo, sem período de vigência: trocar a escala é remover um Monitor e colocar outro. O histórico fica em `RegistroAula.lancado_por`.
 - `nome_monitor`/`telefone_monitor` da `Oficina` continuam como texto livre para quem conduz a oficina sem ter conta no sistema.
+- **Usuários não são excluídos, só desativados** (`is_active`), para preservar o histórico (ex.: `RegistroAula.lancado_por`). O Diretor não pode desativar a própria conta nem alterar o próprio nível.
+- **Unidades não têm exclusão pelo painel** no MVP: elas vão concentrar oficinas, alunos e matrículas.
+- **Regras de acesso centralizadas em `core/acesso.py`** (`NivelAcesso`, `is_diretor`, `filtrar_por_escola`, `pode_acessar_oficina`…). Middleware, mixins e todos os apps usam essas funções, sem reimplementar a regra.
 
 ## 3. Arquitetura multi-unidade + 3 níveis de acesso (o núcleo a replicar)
 
@@ -181,6 +184,12 @@ Matricula             → FK Aluno, escola, oficina, turno, data_inscricao, stat
 - [x] Nomes dos 3 níveis de acesso e dos Groups: **Diretor / Coordenador / Monitor**
 - [x] Divisão em apps Django definida (seção 2.1)
 - [x] Infra base criada: Docker Compose, settings via `.env`, `entrypoint.sh`, `atualizar.sh`
+- [x] **Etapa 1 — Fundação:** `EscolaNaica`, `Profile` + Groups, login/logout, middleware, mixins, CRUD de unidades e usuários (Diretor)
+- [ ] Etapa 2 — Oficinas (`TipoOficina`, `Oficina`, designação de Monitores)
+- [ ] Etapa 3 — Cadastro do aluno (3a dados/endereço/responsável, 3b família/emergência, 3c saúde)
+- [ ] Etapa 4 — Anexos
+- [ ] Etapa 5 — Matrícula
+- [ ] Etapa 6 — Frequência
 - [ ] *(pós-MVP)* Definir o domínio/VPS de destino (`ALLOWED_HOSTS` e o `HEALTHCHECK_HOST` do `atualizar.sh`)
 - [ ] *(pós-MVP)* Decidir a regra de visualização de `FichaSaude` por nível de acesso (sugestão: Monitor vê só alergias/medicação)
 - [ ] *(pós-MVP)* Integrar ao SSO Keycloak `desenvolvimento-social`

@@ -1,5 +1,11 @@
 from django.urls import path
 
+from . import views
+
 app_name = 'escolas'
 
-urlpatterns = []
+urlpatterns = [
+    path('', views.EscolaListView.as_view(), name='lista'),
+    path('nova/', views.EscolaCreateView.as_view(), name='criar'),
+    path('<int:pk>/editar/', views.EscolaUpdateView.as_view(), name='editar'),
+]

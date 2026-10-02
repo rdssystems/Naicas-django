@@ -1,0 +1,45 @@
+{% extends "core/base.html" %}
+
+{% block title %}Unidades{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Unidades Naica</h1>
+    <a href="{% url 'escolas:criar' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nova unidade</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nome</th>
+                    <th>Endereço</th>
+                    <th>Contato</th>
+                    <th>Coordenador responsável</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for escola in escolas %}
+                <tr>
+                    <td class="fw-semibold">{{ escola.nome }}</td>
+                    <td>{{ escola.endereco|default:"—" }}</td>
+                    <td>
+                        {% if escola.telefone %}<div>{{ escola.telefone }}</div>{% endif %}
+                        {% if escola.email %}<div class="small text-muted">{{ escola.email }}</div>{% endif %}
+                        {% if not escola.telefone and not escola.email %}—{% endif %}
+                    </td>
+                    <td>{% if escola.coordenador_user %}{{ escola.coordenador_user.get_full_name|default:escola.coordenador_user.username }}{% else %}<span class="text-muted">Não definido</span>{% endif %}</td>
+                    <td class="text-end">
+                        <a href="{% url 'escolas:editar' escola.pk %}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">Nenhuma unidade cadastrada ainda.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

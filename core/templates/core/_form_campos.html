@@ -1,0 +1,28 @@
+{% load widget_tweaks %}
+{% comment %}
+Renderiza os campos de um form com Bootstrap.
+Uso: {% include "core/_form_campos.html" with form=form %}
+{% endcomment %}
+{% for erro in form.non_field_errors %}
+    <div class="alert alert-danger">{{ erro }}</div>
+{% endfor %}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+{% for field in form.visible_fields %}
+    <div class="mb-3">
+        {% if field.widget_type == 'checkbox' %}
+            <div class="form-check">
+                {% render_field field class="form-check-input" %}
+                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            </div>
+        {% else %}
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+            {% if field.widget_type == 'select' %}
+                {% if field.errors %}{% render_field field class="form-select is-invalid" %}{% else %}{% render_field field class="form-select" %}{% endif %}
+            {% else %}
+                {% if field.errors %}{% render_field field class="form-control is-invalid" %}{% else %}{% render_field field class="form-control" %}{% endif %}
+            {% endif %}
+        {% endif %}
+        {% for erro in field.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
+        {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
+    </div>
+{% endfor %}

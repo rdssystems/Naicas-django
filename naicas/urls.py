@@ -20,3 +20,5 @@ urlpatterns = [
 if settings.DEBUG:
     # Só em dev. Em produção, anexos (dados pessoais) são servidos por view autenticada.
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+handler403 = 'core.views.erro_403'

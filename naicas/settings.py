@@ -101,8 +101,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # O middleware de contexto da unidade (request.active_escola) entra aqui,
-    # logo após AuthenticationMiddleware, quando o app core for implementado.
+    'core.middleware.ActiveEscolaMiddleware',  # depende do request.user
 ]
 
 ROOT_URLCONF = 'naicas.urls'
@@ -117,6 +116,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.papel',
             ],
         },
     },
@@ -149,7 +149,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # O app usuarios fornece as views de login/logout.
 LOGIN_URL = 'usuarios:login'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = 'core:home'
 LOGOUT_REDIRECT_URL = 'usuarios:login'
 
 # SSO Keycloak (pós-MVP): seguir o padrão da origem, com OIDC_ENABLED ligado

@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if escola %}Editar unidade{% else %}Nova unidade{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <a href="{% url 'escolas:lista' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Unidades</a>
+        <h1 class="h4 mt-2 mb-3">{% if escola %}Editar {{ escola.nome }}{% else %}Nova unidade{% endif %}</h1>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% include "core/_form_campos.html" with form=form %}
+                    {% if not escola %}
+                        <p class="small text-muted">O coordenador responsável é escolhido depois, ao editar a unidade, entre os Coordenadores vinculados a ela.</p>
+                    {% elif not form.coordenador_user.field.queryset.exists %}
+                        <p class="small text-muted">Nenhum Coordenador vinculado a esta unidade ainda. Crie um em <a href="{% url 'usuarios:criar' %}">Usuários</a>.</p>
+                    {% endif %}
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'escolas:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
