@@ -1,7 +1,5 @@
 """URLs raiz do Naicas: só inclui as URLs de cada app, cada um com namespace próprio."""
 
-from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
@@ -17,8 +15,7 @@ urlpatterns = [
     path('', include('core.urls')),
 ]
 
-if settings.DEBUG:
-    # Só em dev. Em produção, anexos (dados pessoais) são servidos por view autenticada.
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# /media/ NÃO é servido (nem em dev): os anexos têm dados pessoais e só saem
+# pela view autenticada anexos:arquivo, que checa a visibilidade do aluno.
 
 handler403 = 'core.views.erro_403'

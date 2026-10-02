@@ -23,11 +23,19 @@
                     <li class="nav-item"><a class="nav-link" href="{% url 'oficinas:lista' %}">{% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</a></li>
                     {% if is_diretor or is_coordenador %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'alunos:lista' %}">Alunos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'oficinas:tipos' %}">Tipos de oficina</a></li>
-                    {% endif %}
-                    {% if is_diretor %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'escolas:lista' %}">Unidades</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'usuarios:lista' %}">Usuários</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Configurações</a>
+                        <ul class="dropdown-menu">
+                            {% if is_diretor %}
+                            <li><a class="dropdown-item" href="{% url 'escolas:lista' %}"><i class="bi bi-building"></i> Unidades</a></li>
+                            <li><a class="dropdown-item" href="{% url 'usuarios:lista' %}"><i class="bi bi-people"></i> Usuários</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{% url 'oficinas:tipos' %}"><i class="bi bi-tags"></i> Tipos de oficina</a></li>
+                            {% if is_diretor %}
+                            <li><a class="dropdown-item" href="{% url 'anexos:tipos' %}"><i class="bi bi-file-earmark-text"></i> Tipos de documento</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav">

@@ -1,6 +1,7 @@
 """
-Gera alunos FICTÍCIOS para desenvolvimento/demonstração, com as etapas 1 a 4
-preenchidas (dados, endereço, responsáveis, família, contatos de emergência e saúde).
+Gera alunos FICTÍCIOS para desenvolvimento/demonstração, com as etapas 1 a 5
+preenchidas (dados, endereço, responsáveis, família, contatos de emergência,
+saúde e, via popular_anexos, PDFs fictícios dos documentos obrigatórios).
 
 Parte dos alunos é de irmãos que compartilham a mesma mãe, para exercitar o
 reaproveitamento do responsável pelo CPF. Nunca rodar em produção.
@@ -14,7 +15,9 @@ import random
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.apps import apps
 from django.conf import settings
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
@@ -82,7 +85,7 @@ def ano_escolar_pela_idade(idade):
 
 
 class Command(BaseCommand):
-    help = 'Cria alunos fictícios (etapas 1 a 4 completas) para desenvolvimento.'
+    help = 'Cria alunos fictícios (cadastro completo) para desenvolvimento.'
 
     def add_arguments(self, parser):
         parser.add_argument('--quantidade', type=int, default=10)
@@ -103,6 +106,9 @@ class Command(BaseCommand):
                 # ~1 em cada 3 famílias tem 2 irmãos (mesma mãe, mesmo endereço).
                 filhos = 2 if quantidade - len(criados) >= 2 and self.rng.random() < 0.35 else 1
                 criados += self.criar_familia(escola, filhos)
+            # Etapa 5 é de outro app: chamado por nome, sem importar anexos.
+            if apps.is_installed('anexos'):
+                call_command('popular_anexos', aluno=[a.pk for a in criados], stdout=self.stdout)
 
         for aluno in criados:
             self.stdout.write(f'  {aluno.nome} ({aluno.get_ano_escolar_display()})')

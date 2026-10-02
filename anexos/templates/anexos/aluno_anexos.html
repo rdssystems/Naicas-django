@@ -1,0 +1,67 @@
+{% extends "core/base.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Anexos de {{ aluno.nome }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'alunos:detalhe' aluno.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ aluno.nome }}</a>
+<h1 class="h4 mt-2 mb-3">Anexos</h1>
+
+{% include "alunos/_etapas_nav.html" %}
+
+{% if pendentes %}
+<div class="alert alert-warning small">
+    <i class="bi bi-exclamation-triangle"></i> Faltam {{ pendentes|length }} documento{{ pendentes|pluralize }} obrigatório{{ pendentes|pluralize }} para o cadastro ficar completo:
+    {% for tipo in pendentes %}<strong>{{ tipo.nome }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}.
+</div>
+{% else %}
+<div class="alert alert-success small"><i class="bi bi-check-circle"></i> Todos os documentos obrigatórios foram enviados.</div>
+{% endif %}
+
+<div class="card shadow-sm">
+    <ul class="list-group list-group-flush">
+    {% for linha in linhas %}
+        <li class="list-group-item py-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div>
+                    <span class="fw-semibold">{{ linha.tipo.nome }}</span>
+                    {% if linha.anexos %}<span class="badge text-bg-success ms-1">Enviado</span>
+                    {% elif linha.tipo.obrigatorio %}<span class="badge text-bg-danger ms-1">Obrigatório · pendente</span>
+                    {% else %}<span class="badge text-bg-light border ms-1">Opcional</span>{% endif %}
+                </div>
+                <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-start" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="tipo_documento" value="{{ linha.tipo.pk }}">
+                    <div>
+                        <input type="file" name="arquivo" required class="form-control form-control-sm{% if linha.form.errors %} is-invalid{% endif %}"
+                               accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*" aria-label="Arquivo para {{ linha.tipo.nome }}">
+                        {% for erro in linha.form.arquivo.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
+                        {% for erro in linha.form.tipo_documento.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap"><i class="bi bi-upload"></i> Enviar</button>
+                </form>
+            </div>
+            {% for anexo in linha.anexos %}
+                {% include "anexos/_anexo_item.html" %}
+            {% endfor %}
+        </li>
+    {% endfor %}
+    </ul>
+</div>
+<p class="small text-muted mt-2">PDF, JPG, PNG ou WEBP, até 10 MB por arquivo. Você pode enviar mais de um arquivo por tipo (ex.: frente e verso).</p>
+
+{% if anexos_tipos_inativos %}
+<div class="card shadow-sm mt-3">
+    <div class="card-body">
+        <h2 class="h6 text-uppercase text-muted mb-2">Arquivos de tipos desativados</h2>
+        {% for anexo in anexos_tipos_inativos %}
+            {% include "anexos/_anexo_item.html" with mostrar_tipo=True %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-end mt-3">
+    <a href="{% url 'alunos:detalhe' aluno.pk %}" class="btn btn-outline-secondary">Voltar ao aluno</a>
+</div>
+{% endblock %}

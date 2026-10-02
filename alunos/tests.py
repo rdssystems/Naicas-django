@@ -377,15 +377,17 @@ class EtapaFamiliaTests(BaseAlunosTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self.aluno_a.membros_familia.exists())
 
-    def test_cadastro_completo_com_etapas_1_a_4(self):
+    def test_etapas_1_a_4_concluidas(self):
+        # O selo "Cadastro completo" também depende dos anexos (ver anexos/tests.py).
         AlunoResponsavel.objects.create(aluno=self.aluno_a, responsavel=criar_responsavel(500000001), grau_parentesco='MAE')
         for contato in self.CONTATOS:
             ContatoEmergencia.objects.create(aluno=self.aluno_a, **contato)
-        self.assertFalse(Aluno.objects.get(pk=self.aluno_a.pk).cadastro_completo)  # falta saúde
+        self.assertFalse(Aluno.objects.get(pk=self.aluno_a.pk).etapas()[3][3])  # falta saúde
         FichaSaude.objects.create(
             aluno=self.aluno_a, tipo_assistencia='SUS', possui_problema_saude=False, usa_medicacao_controlada=False,
         )
-        self.assertTrue(Aluno.objects.get(pk=self.aluno_a.pk).cadastro_completo)
+        concluidas = [e[3] for e in Aluno.objects.get(pk=self.aluno_a.pk).etapas()[:4]]
+        self.assertEqual(concluidas, [True, True, True, True])
 
     def test_permissoes(self):
         self.client.force_login(self.monitor)
@@ -469,7 +471,12 @@ class PopularAlunosCommandTests(BaseAlunosTestCase):
         from django.core.management import call_command
         from django.test import override_settings
 
-        with override_settings(DEBUG=True):
+        import shutil
+        import tempfile
+
+        media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, media, True)
+        with override_settings(DEBUG=True, MEDIA_ROOT=media):
             call_command('popular_alunos', quantidade=6, escola='naica-norte', seed=1, stdout=StringIO())
         novos = Aluno.objects.filter(escola=self.escola_b).exclude(pk=self.aluno_b.pk)
         self.assertEqual(novos.count(), 6)

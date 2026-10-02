@@ -7,6 +7,8 @@ from django.db.models import Q
 from core import acesso
 from core.validators import validar_cep, validar_cpf, validar_nis
 
+from . import etapas
+
 
 class UF(models.TextChoices):
     AC = 'AC', 'AC'
@@ -126,21 +128,11 @@ class Aluno(models.Model):
     def __str__(self):
         return self.nome
 
-    # --- Progresso do cadastro (etapas obrigatórias) ---
-    # Cada etapa nova (3b, 3c, anexos) acrescenta a sua verificação aqui.
+    # --- Progresso do cadastro: ver alunos/etapas.py (registro de etapas) ---
 
     def etapas(self):
         """Lista (número, nome, url_name, concluída?, disponível?) para a navegação."""
-        tem_endereco = hasattr(self, 'endereco')
-        return [
-            (1, 'Dados do aluno', 'alunos:etapa_dados', tem_endereco, True),
-            # .all() aproveita o prefetch_related da listagem (exists() faria 1 query por aluno).
-            (2, 'Responsável', 'alunos:etapa_responsaveis', bool(self.responsaveis_vinculos.all()), True),
-            (3, 'Família e emergência', 'alunos:etapa_familia', len(self.contatos_emergencia.all()) >= 2, True),
-            (4, 'Saúde', 'alunos:etapa_saude', hasattr(self, 'ficha_saude'), True),
-            (5, 'Anexos', None, False, False),
-            (6, 'Matrícula', None, False, False),
-        ]
+        return etapas.etapas_do_aluno(self)
 
     def vinculos_fora_da_familia(self):
         """
@@ -163,7 +155,7 @@ class Aluno(models.Model):
 
     @property
     def cadastro_completo(self):
-        return all(concluida for _, _, _, concluida, disponivel in self.etapas() if disponivel)
+        return etapas.cadastro_completo(self)
 
 
 class Endereco(models.Model):

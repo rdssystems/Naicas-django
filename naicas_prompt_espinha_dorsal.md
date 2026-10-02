@@ -68,6 +68,13 @@ Construir um novo app Django para o **Naicas**: múltiplas escolas/unidades Naic
 - **Parentesco é uma lista única** (`Parentesco`: Mãe, Pai, Madrasta/Padrasto, Avó/Avô, Tia/Tio, Irmã/Irmão, Prima/Primo, Madrinha/Padrinho, Tutor(a) legal, Vizinha/Vizinho, Amiga/Amigo da família, Outro), usada no responsável, na composição familiar e nos contatos de emergência, sem texto livre.
 - **Responsáveis entram pré-preenchidos na composição familiar** (nome, parentesco, nascimento), com opção de remover. Isso acontece automaticamente só na primeira visita à etapa 3. Depois, um botão "Incluir responsáveis que faltam" aparece quando há responsável fora da lista, para não reinserir quem foi removido de propósito. `MembroFamiliar.responsavel` (FK opcional) guarda a origem da linha.
 - **Etapa 4, Saúde (até a decisão de LGPD pós-MVP):** a ficha é vista e editada só por **Diretor e Coordenador** (o mesmo escopo de visibilidade do aluno). A regra fica em duas funções isoladas em `core/acesso.py`: `pode_ver_saude_completa` (prontuário inteiro) e `pode_ver_saude_emergencia` (só alergias e medicação). Hoje as duas excluem o Monitor; liberar o mínimo de emergência para ele é mudar só a segunda função. A etapa conta como concluída quando a ficha existe. O "Qual(is)" da assistência é obrigatório quando há plano de saúde. Alergia é texto livre, e vazio significa "nenhuma conhecida".
+- **Etapa 5, Anexos:**
+  - Aceita **imagens (JPG, PNG, WEBP) e PDF**, até **10 MB** por arquivo. O conteúdo é conferido, e não só a extensão. Um mesmo tipo pode ter vários arquivos (ex.: RG frente e verso).
+  - **Falta de documento obrigatório impede o selo "Cadastro completo"**.
+  - Os tipos de documento são geridos pelo **Diretor numa tela do painel** (contas de Diretor não têm acesso ao Django Admin). Um tipo em uso não é excluído, só desativado.
+  - Obrigatórios por padrão (o Diretor pode mudar): certidão de nascimento ou RG do aluno, CPF do aluno, documento com foto do responsável, comprovante de endereço, declaração de matrícula escolar e termo de autorização de uso de imagem. Opcionais: cartão SUS, comprovante de NIS/CadÚnico, laudo médico e foto 3x4.
+  - Os arquivos **nunca são servidos publicamente**: só por uma view autenticada que checa a visibilidade do aluno (também em dev). Ficam gravados sem o nome original no caminho, e excluir o anexo apaga o arquivo do disco.
+- **Etapas do cadastro são um registro** (`alunos/etapas.py`): `anexos` e `matriculas` registram as etapas 5 e 6 no `ready()` do próprio app. Assim `alunos` não importa esses apps (dependência numa só direção). A matrícula (etapa 6) não conta para o selo, porque o aluno pode estar completo e na fila de espera.
 - **Regras de acesso centralizadas em `core/acesso.py`** (`NivelAcesso`, `is_diretor`, `filtrar_por_escola`, `pode_acessar_oficina`…). Middleware, mixins e todos os apps usam essas funções, sem reimplementar a regra.
 
 ## 3. Arquitetura multi-unidade + 3 níveis de acesso (o núcleo a replicar)
@@ -205,7 +212,7 @@ Matricula             → FK Aluno, escola, oficina, turno, data_inscricao, stat
 - [x] **Etapa 3a — Cadastro do aluno:** dados + endereço (ViaCEP), responsáveis reaproveitados por CPF, visibilidade por unidade de cadastro
 - [x] **Etapa 3b — Família e emergência:** membros familiares (opcional, soma de renda) e contatos de emergência (mínimo 2) com linhas dinâmicas
 - [x] **Etapa 3c — Ficha de saúde:** FichaSaude com campos condicionais; acesso só Diretor/Coordenador via core.acesso.pode_ver_saude_* (Monitor pendente da decisão LGPD)
-- [ ] Etapa 4 — Anexos
+- [x] **Etapa 4 — Anexos:** tipos de documento (Diretor), envio de PDF/imagem com validação de conteúdo, download só por view autenticada, obrigatórios bloqueiam o selo; etapas do cadastro viraram registro (`alunos/etapas.py`)
 - [ ] Etapa 5 — Matrícula
 - [ ] Etapa 6 — Frequência
 - [ ] *(pós-MVP)* Definir o domínio/VPS de destino (`ALLOWED_HOSTS` e o `HEALTHCHECK_HOST` do `atualizar.sh`)

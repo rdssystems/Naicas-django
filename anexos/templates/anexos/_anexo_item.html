@@ -1,0 +1,12 @@
+<div class="d-flex justify-content-between align-items-center mt-2 ps-2 border-start border-3">
+    <div class="small">
+        <i class="bi {% if anexo.e_imagem %}bi-file-earmark-image{% else %}bi-file-earmark-pdf{% endif %}"></i>
+        <a href="{% url 'anexos:arquivo' anexo.pk %}" target="_blank" rel="noopener" class="text-decoration-none">{{ anexo.nome_original }}</a>
+        {% if mostrar_tipo %}<span class="text-muted">({{ anexo.tipo_documento }})</span>{% endif %}
+        <span class="text-muted">· {{ anexo.tamanho|filesizeformat }} · {{ anexo.data_envio|date:"d/m/Y H:i" }}{% if anexo.enviado_por %} por {{ anexo.enviado_por.get_full_name|default:anexo.enviado_por.username }}{% endif %}</span>
+    </div>
+    <form method="post" action="{% url 'anexos:excluir' anexo.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Remover" onclick="return confirm('Remover {{ anexo.nome_original|escapejs }}? O arquivo será apagado.');"><i class="bi bi-trash"></i></button>
+    </form>
+</div>

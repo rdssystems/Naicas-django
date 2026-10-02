@@ -12,6 +12,7 @@ from core.mixins import PerfilRequiredMixin
 from core.validators import so_digitos
 from escolas.models import EscolaNaica
 
+from . import etapas
 from .forms import (
     AlunoForm, ContatoEmergenciaFormSet, EnderecoForm, FichaSaudeForm, MembroFamiliarFormSet, ResponsavelForm,
 )
@@ -38,7 +39,7 @@ class AlunoListView(CadastroAlunoMixin, ListView):
 
     def get_queryset(self):
         qs = self.alunos_visiveis().select_related('escola', 'endereco', 'ficha_saude').prefetch_related(
-            'responsaveis_vinculos', 'contatos_emergencia'
+            *etapas.prefetches()
         )
         params = self.request.GET
         if busca := params.get('q', '').strip():

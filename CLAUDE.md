@@ -11,6 +11,8 @@ App Django multi-unidade para a rede de escolas Naica: oficinas, cadastro de alu
 - **Regra de ouro de escopo:** `Profile.escola` setada sempre vence `nivel_acesso` ao decidir a unidade ativa.
 - **`escola = None` NÃO é Diretor:** Monitores são globais (também sem escola) e escopados pelas oficinas designadas (`Oficina.monitores`). Acesso de rede só com `nivel_acesso == 'DIRETOR'` ou superuser.
 - Só o Diretor gerencia contas de usuário.
+- **Dependência entre apps numa direção só:** `alunos` não importa `anexos`/`matriculas`; esses apps registram a sua etapa do cadastro em `alunos/etapas.py` no `ready()`.
+- `/media/` nunca é servido diretamente: anexos (PII) só saem pela view `anexos:arquivo`.
 - Escopo por unidade é aplicado no queryset/na view (mixins do `core`), nunca só escondido no template. O mesmo vale para os dados de saúde (LGPD).
 - Templates em `<app>/templates/<app>/`, sempre estendendo `core/base.html` (Bootstrap 5.3 + bootstrap-icons).
 - Textos de interface, nomes de models e campos em português.
@@ -22,7 +24,8 @@ docker compose up -d --build      # app em http://localhost:8020
 docker compose exec web python manage.py test
 docker compose exec web python manage.py createsuperuser
 docker compose logs -f web
-docker compose exec web python manage.py popular_alunos [--quantidade 10] [--escola <slug>] [--seed 42]  # alunos fictícios (só DEBUG)
+docker compose exec web python manage.py popular_alunos [--quantidade 10] [--escola <slug>] [--seed 42]  # alunos fictícios com cadastro completo (só DEBUG)
+docker compose exec web python manage.py popular_anexos --ficticios   # PDFs fictícios nos obrigatórios pendentes (só DEBUG)
 ```
 
 - Portas: web `8020`, Postgres `127.0.0.1:5436` (8000/5434 são do Gestão Qualificação).
