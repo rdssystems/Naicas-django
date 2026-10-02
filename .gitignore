@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ambientes
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+
+# Django
+staticfiles/
+media/
+*.sqlite3
+*.log
+
+# Backups e dados reais (PII)
+*.dump
+*.sql
+*.bak
+backups/
+*.csv
+*.xlsx
+
+# IDE / SO
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

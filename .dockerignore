@@ -1,0 +1,26 @@
+# Segredos: nunca entram na imagem (chegam via env_file no compose)
+.env
+.env.*
+!.env.example
+
+# Dados reais (PII) e volumes
+media/
+staticfiles/
+*.dump
+*.sql
+*.bak
+backups/
+*.csv
+*.xlsx
+
+# Controle de versão e ambiente local
+.git/
+.gitignore
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Editor/IDE
+.vscode/
+.idea/

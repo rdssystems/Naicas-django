@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: naicas-db
+    restart: always
+    environment:
+      - POSTGRES_DB=${DB_NAME:-naicas_db}
+      - POSTGRES_USER=${DB_USER:-naicas_user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?Defina DB_PASSWORD no .env}
+    # Porta publicada só no loopback: o app acessa o banco pela rede interna
+    # do Docker (db:5432) e o banco não fica exposto na internet.
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT:-5436}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-naicas_user} -d ${DB_NAME:-naicas_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    container_name: naicas-app
+    restart: always
+    # Código em bind-mount: deploy = git pull + up --build, sem rebuild da imagem base.
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "${WEB_PORT:-8020}:8000"
+    env_file:
+      - .env
+    environment:
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
