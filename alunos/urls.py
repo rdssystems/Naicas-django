@@ -11,6 +11,7 @@ urlpatterns = [
     path('<int:pk>/dados/', views.EtapaDadosView.as_view(), name='etapa_dados'),
     path('<int:pk>/responsaveis/', views.EtapaResponsaveisView.as_view(), name='etapa_responsaveis'),
     path('<int:pk>/familia/', views.EtapaFamiliaView.as_view(), name='etapa_familia'),
+    path('<int:pk>/saude/', views.EtapaSaudeView.as_view(), name='etapa_saude'),
     path(
         '<int:pk>/responsaveis/<int:vinculo_pk>/editar/',
         views.ResponsavelEditarView.as_view(), name='responsavel_editar',

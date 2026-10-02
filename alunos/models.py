@@ -137,7 +137,7 @@ class Aluno(models.Model):
             # .all() aproveita o prefetch_related da listagem (exists() faria 1 query por aluno).
             (2, 'Responsável', 'alunos:etapa_responsaveis', bool(self.responsaveis_vinculos.all()), True),
             (3, 'Família e emergência', 'alunos:etapa_familia', len(self.contatos_emergencia.all()) >= 2, True),
-            (4, 'Saúde', None, False, False),
+            (4, 'Saúde', 'alunos:etapa_saude', hasattr(self, 'ficha_saude'), True),
             (5, 'Anexos', None, False, False),
             (6, 'Matrícula', None, False, False),
         ]
@@ -297,3 +297,64 @@ class ContatoEmergencia(models.Model):
 
     def __str__(self):
         return f'{self.nome} ({self.get_parentesco_display()})'
+
+
+class FichaSaude(models.Model):
+    """
+    Dado sensível (LGPD). Quem pode ver é decidido SÓ por
+    core.acesso.pode_ver_saude_completa / pode_ver_saude_emergencia.
+    """
+
+    class Assistencia(models.TextChoices):
+        SUS = 'SUS', 'SUS'
+        PLANO = 'PLANO', 'Plano de saúde'
+        AMBOS = 'AMBOS', 'SUS e plano de saúde'
+
+    aluno = models.OneToOneField(Aluno, on_delete=models.CASCADE, related_name='ficha_saude')
+    # Assistência médica
+    tipo_assistencia = models.CharField('assistência médica', max_length=10, choices=Assistencia.choices)
+    plano_saude = models.CharField('qual(is) plano(s)', max_length=150, blank=True)
+    # Condições
+    possui_problema_saude = models.BooleanField('possui algum problema de saúde?')
+    problema_saude = models.TextField('especifique o problema de saúde', blank=True)
+    # Medicação controlada (Sim/Não + detalhes: no formulário da Prodaub era um texto só)
+    usa_medicacao_controlada = models.BooleanField('usa medicação controlada?')
+    medicacao = models.CharField('qual medicação', max_length=200, blank=True)
+    medicacao_ha_quanto_tempo = models.CharField('há quanto tempo', max_length=100, blank=True)
+    medicacao_reacoes = models.TextField('reações provocadas', blank=True)
+    # Alergias (vazio = nenhuma conhecida)
+    alergias = models.TextField('alergias', blank=True, help_text='Deixe em branco se não houver alergia conhecida.')
+
+    atualizado_em = models.DateTimeField('atualizado em', auto_now=True)
+    atualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='atualizado por', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+',
+    )
+
+    class Meta:
+        verbose_name = 'ficha de saúde'
+        verbose_name_plural = 'fichas de saúde'
+
+    def __str__(self):
+        return f'Ficha de saúde de {self.aluno}'
+
+    def clean(self):
+        erros = {}
+        if self.tipo_assistencia in (self.Assistencia.PLANO, self.Assistencia.AMBOS) and not self.plano_saude:
+            erros['plano_saude'] = 'Informe qual plano de saúde.'
+        if self.possui_problema_saude and not self.problema_saude:
+            erros['problema_saude'] = 'Especifique o problema de saúde.'
+        if self.usa_medicacao_controlada and not self.medicacao:
+            erros['medicacao'] = 'Informe qual medicação.'
+        if erros:
+            raise ValidationError(erros)
+
+    def save(self, *args, **kwargs):
+        # Limpa respostas que deixaram de valer.
+        if self.tipo_assistencia == self.Assistencia.SUS:
+            self.plano_saude = ''
+        if not self.possui_problema_saude:
+            self.problema_saude = ''
+        if not self.usa_medicacao_controlada:
+            self.medicacao = self.medicacao_ha_quanto_tempo = self.medicacao_reacoes = ''
+        super().save(*args, **kwargs)

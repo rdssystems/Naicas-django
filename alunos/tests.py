@@ -10,7 +10,7 @@ from escolas.models import EscolaNaica
 from usuarios.models import Profile
 
 from .forms import AlunoForm, ResponsavelForm
-from .models import Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, MembroFamiliar, Responsavel
+from .models import Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, FichaSaude, MembroFamiliar, Responsavel
 
 
 def gerar_cpf(base9):
@@ -123,6 +123,7 @@ class VisibilidadeTests(BaseAlunosTestCase):
                 reverse('alunos:etapa_responsaveis', args=[self.aluno_a.pk]),
                 reverse('alunos:responsavel_editar', args=[self.aluno_a.pk, vinculo.pk]),
                 reverse('alunos:etapa_familia', args=[self.aluno_a.pk]),
+                reverse('alunos:etapa_saude', args=[self.aluno_a.pk]),
             ]
             for url in urls:
                 self.assertEqual(self.client.get(url).status_code, 200, (user, url))
@@ -376,10 +377,14 @@ class EtapaFamiliaTests(BaseAlunosTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self.aluno_a.membros_familia.exists())
 
-    def test_cadastro_completo_com_etapas_1_a_3(self):
+    def test_cadastro_completo_com_etapas_1_a_4(self):
         AlunoResponsavel.objects.create(aluno=self.aluno_a, responsavel=criar_responsavel(500000001), grau_parentesco='MAE')
         for contato in self.CONTATOS:
             ContatoEmergencia.objects.create(aluno=self.aluno_a, **contato)
+        self.assertFalse(Aluno.objects.get(pk=self.aluno_a.pk).cadastro_completo)  # falta saúde
+        FichaSaude.objects.create(
+            aluno=self.aluno_a, tipo_assistencia='SUS', possui_problema_saude=False, usa_medicacao_controlada=False,
+        )
         self.assertTrue(Aluno.objects.get(pk=self.aluno_a.pk).cadastro_completo)
 
     def test_permissoes(self):
@@ -477,3 +482,97 @@ class PopularAlunosCommandTests(BaseAlunosTestCase):
 
         with self.assertRaises(CommandError):
             call_command('popular_alunos', escola='naica-norte')
+
+
+class EtapaSaudeTests(BaseAlunosTestCase):
+    def url(self, aluno):
+        return reverse('alunos:etapa_saude', args=[aluno.pk])
+
+    def dados(self, **kwargs):
+        base = {
+            'tipo_assistencia': 'SUS', 'plano_saude': '',
+            'possui_problema_saude': 'False', 'problema_saude': '',
+            'usa_medicacao_controlada': 'False', 'medicacao': '', 'medicacao_ha_quanto_tempo': '',
+            'medicacao_reacoes': '', 'alergias': '',
+        }
+        base.update(kwargs)
+        return base
+
+    def test_salva_ficha_e_conclui_etapa(self):
+        self.client.force_login(self.coord_a)
+        response = self.client.post(self.url(self.aluno_a), self.dados(
+            usa_medicacao_controlada='True', medicacao='Ritalina', medicacao_ha_quanto_tempo='1 ano',
+            alergias='Dipirona',
+        ))
+        self.assertRedirects(response, reverse('alunos:detalhe', args=[self.aluno_a.pk]))
+        ficha = FichaSaude.objects.get(aluno=self.aluno_a)
+        self.assertEqual(ficha.medicacao, 'Ritalina')
+        self.assertEqual(ficha.atualizado_por, self.coord_a)
+        self.assertTrue(Aluno.objects.get(pk=self.aluno_a.pk).etapas()[3][3])
+
+    def test_edicao_atualiza_a_mesma_ficha(self):
+        self.client.force_login(self.coord_a)
+        self.client.post(self.url(self.aluno_a), self.dados())
+        self.client.post(self.url(self.aluno_a), self.dados(alergias='Amendoim'))
+        self.assertEqual(FichaSaude.objects.filter(aluno=self.aluno_a).count(), 1)
+        self.assertEqual(FichaSaude.objects.get(aluno=self.aluno_a).alergias, 'Amendoim')
+
+    def test_campos_condicionais(self):
+        self.client.force_login(self.coord_a)
+        casos = [
+            ({'tipo_assistencia': 'PLANO'}, 'plano_saude'),
+            ({'tipo_assistencia': 'AMBOS'}, 'plano_saude'),
+            ({'possui_problema_saude': 'True'}, 'problema_saude'),
+            ({'usa_medicacao_controlada': 'True'}, 'medicacao'),
+        ]
+        for extra, campo in casos:
+            response = self.client.post(self.url(self.aluno_a), self.dados(**extra))
+            self.assertEqual(response.status_code, 200, extra)
+            self.assertIn(campo, response.context['form'].errors, extra)
+        self.assertFalse(FichaSaude.objects.filter(aluno=self.aluno_a).exists())
+
+    def test_sim_nao_obrigatorios(self):
+        self.client.force_login(self.coord_a)
+        response = self.client.post(
+            self.url(self.aluno_a), self.dados(possui_problema_saude='', usa_medicacao_controlada='')
+        )
+        self.assertEqual(set(response.context['form'].errors), {'possui_problema_saude', 'usa_medicacao_controlada'})
+
+    def test_respostas_que_deixam_de_valer_sao_limpas(self):
+        self.client.force_login(self.coord_a)
+        self.client.post(self.url(self.aluno_a), self.dados(
+            tipo_assistencia='SUS', plano_saude='Unimed', usa_medicacao_controlada='False', medicacao='X',
+        ))
+        ficha = FichaSaude.objects.get(aluno=self.aluno_a)
+        self.assertEqual((ficha.plano_saude, ficha.medicacao), ('', ''))
+
+    def test_lgpd_monitor_nao_acessa_nem_pela_url(self):
+        FichaSaude.objects.create(
+            aluno=self.aluno_a, tipo_assistencia='SUS', possui_problema_saude=True, problema_saude='Segredo',
+            usa_medicacao_controlada=False,
+        )
+        self.client.force_login(self.monitor)
+        self.assertEqual(self.client.get(self.url(self.aluno_a)).status_code, 403)
+        self.assertEqual(self.client.post(self.url(self.aluno_a), self.dados()).status_code, 403)
+        self.assertEqual(FichaSaude.objects.get(aluno=self.aluno_a).problema_saude, 'Segredo')
+
+    def test_coordenador_de_outra_unidade_nao_ve(self):
+        self.client.force_login(self.coord_b)
+        self.assertEqual(self.client.get(self.url(self.aluno_a)).status_code, 404)
+
+    def test_resumo_mostra_saude_para_quem_pode(self):
+        FichaSaude.objects.create(
+            aluno=self.aluno_a, tipo_assistencia='SUS', possui_problema_saude=True, problema_saude='Asma leve',
+            usa_medicacao_controlada=False, alergias='Dipirona',
+        )
+        self.client.force_login(self.coord_a)
+        response = self.client.get(reverse('alunos:detalhe', args=[self.aluno_a.pk]))
+        self.assertContains(response, 'Dipirona')
+        self.assertContains(response, 'Asma leve')
+
+    def test_regra_de_papel_centralizada(self):
+        from core import acesso
+        self.assertTrue(acesso.pode_ver_saude_completa(self.diretor))
+        self.assertTrue(acesso.pode_ver_saude_completa(self.coord_a))
+        self.assertFalse(acesso.pode_ver_saude_completa(self.monitor))
+        self.assertFalse(acesso.pode_ver_saude_emergencia(self.monitor))  # até a decisão de LGPD

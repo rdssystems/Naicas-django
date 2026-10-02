@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
@@ -12,9 +13,9 @@ from core.validators import so_digitos
 from escolas.models import EscolaNaica
 
 from .forms import (
-    AlunoForm, ContatoEmergenciaFormSet, EnderecoForm, MembroFamiliarFormSet, ResponsavelForm,
+    AlunoForm, ContatoEmergenciaFormSet, EnderecoForm, FichaSaudeForm, MembroFamiliarFormSet, ResponsavelForm,
 )
-from .models import Aluno, AlunoResponsavel, Responsavel
+from .models import Aluno, AlunoResponsavel, FichaSaude, Responsavel
 
 
 class CadastroAlunoMixin(PerfilRequiredMixin):
@@ -36,7 +37,7 @@ class AlunoListView(CadastroAlunoMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        qs = self.alunos_visiveis().select_related('escola', 'endereco').prefetch_related(
+        qs = self.alunos_visiveis().select_related('escola', 'endereco', 'ficha_saude').prefetch_related(
             'responsaveis_vinculos', 'contatos_emergencia'
         )
         params = self.request.GET
@@ -71,6 +72,12 @@ class AlunoDetailView(CadastroAlunoMixin, DetailView):
         context['vinculos'] = self.object.responsaveis_vinculos.select_related('responsavel')
         context['membros'] = self.object.membros_familia.all()
         context['contatos'] = self.object.contatos_emergencia.all()
+        # Dado sensível: só vai para o template se o papel puder ver.
+        user = self.request.user
+        ficha = getattr(self.object, 'ficha_saude', None)
+        context['pode_ver_saude_completa'] = acesso.pode_ver_saude_completa(user)
+        context['pode_ver_saude_emergencia'] = acesso.pode_ver_saude_emergencia(user)
+        context['ficha'] = ficha if context['pode_ver_saude_emergencia'] else None
         return context
 
 
@@ -210,6 +217,36 @@ class EtapaFamiliaView(CadastroAlunoMixin, View):
             membros.save()
             contatos.save()
         messages.success(request, 'Família e contatos de emergência salvos.')
+        return redirect('alunos:detalhe', pk=aluno.pk)
+
+
+class EtapaSaudeView(CadastroAlunoMixin, View):
+    """Etapa 4: ficha de saúde (LGPD: papel checado em core.acesso, não só no template)."""
+
+    template_name = 'alunos/etapa_saude.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and not acesso.pode_ver_saude_completa(request.user):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def render(self, aluno, form):
+        return render(self.request, self.template_name, {'aluno': aluno, 'form': form, 'etapa_atual': 4})
+
+    def get(self, request, pk):
+        aluno = self.get_aluno()
+        return self.render(aluno, FichaSaudeForm(instance=getattr(aluno, 'ficha_saude', None)))
+
+    def post(self, request, pk):
+        aluno = self.get_aluno()
+        ficha = getattr(aluno, 'ficha_saude', None) or FichaSaude(aluno=aluno)
+        form = FichaSaudeForm(request.POST, instance=ficha)
+        if not form.is_valid():
+            return self.render(aluno, form)
+        ficha = form.save(commit=False)
+        ficha.atualizado_por = request.user
+        ficha.save()
+        messages.success(request, 'Ficha de saúde salva.')
         return redirect('alunos:detalhe', pk=aluno.pk)
 
 

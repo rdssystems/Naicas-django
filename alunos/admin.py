@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, MembroFamiliar, Responsavel
+from .models import Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, FichaSaude, MembroFamiliar, Responsavel
 
 
 class EnderecoInline(admin.StackedInline):
@@ -24,12 +24,18 @@ class ContatoEmergenciaInline(admin.TabularInline):
     extra = 0
 
 
+class FichaSaudeInline(admin.StackedInline):
+    model = FichaSaude
+    can_delete = False
+    readonly_fields = ('atualizado_em', 'atualizado_por')
+
+
 @admin.register(Aluno)
 class AlunoAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cpf', 'escola', 'data_nascimento', 'ano_escolar')
     list_filter = ('escola', 'ano_escolar', 'sexo')
     search_fields = ('nome', 'cpf', 'nome_mae')
-    inlines = [EnderecoInline, AlunoResponsavelInline, MembroFamiliarInline, ContatoEmergenciaInline]
+    inlines = [EnderecoInline, AlunoResponsavelInline, MembroFamiliarInline, ContatoEmergenciaInline, FichaSaudeInline]
     readonly_fields = ('criado_em', 'atualizado_em', 'criado_por')
 
 

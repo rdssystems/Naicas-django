@@ -93,6 +93,22 @@ def filtrar_oficinas_visiveis(user, queryset):
     return filtrar_por_escola(user, queryset)
 
 
+# --- Dados de saúde (LGPD) ---
+# Ponto ÚNICO de decisão sobre quem vê a ficha de saúde do aluno. A regra do
+# Monitor ainda será definida (pós-MVP): por enquanto ele não vê nada. Estas
+# funções decidem o PAPEL; a visibilidade do aluno em si (unidade) é checada
+# antes, pelo Aluno.objects.visiveis_para.
+
+def pode_ver_saude_completa(user):
+    """Prontuário inteiro (assistência, condições, medicação, alergias)."""
+    return is_diretor(user) or is_coordenador(user)
+
+
+def pode_ver_saude_emergencia(user):
+    """Mínimo para agir numa emergência: alergias e medicação controlada."""
+    return pode_ver_saude_completa(user)
+
+
 def pode_acessar_oficina(user, oficina):
     """
     Lançar chamada / ver matriculados de uma oficina: Diretor, Coordenador da

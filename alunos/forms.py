@@ -4,7 +4,9 @@ from core import acesso
 from core.forms import DigitosField, MoedaField, sim_nao_field
 from escolas.models import EscolaNaica
 
-from .models import Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, MembroFamiliar, Parentesco, Responsavel
+from .models import (
+    Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, FichaSaude, MembroFamiliar, Parentesco, Responsavel,
+)
 
 DATA = forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')
 
@@ -136,3 +138,23 @@ ContatoEmergenciaFormSet = forms.inlineformset_factory(
     fields=['nome', 'parentesco', 'celular'],
     extra=0, min_num=2, validate_min=True, can_delete=True,
 )
+
+
+class FichaSaudeForm(forms.ModelForm):
+    possui_problema_saude = sim_nao_field('Possui algum problema de saúde?')
+    usa_medicacao_controlada = sim_nao_field('Usa medicação controlada?')
+
+    class Meta:
+        model = FichaSaude
+        fields = [
+            'tipo_assistencia', 'plano_saude',
+            'possui_problema_saude', 'problema_saude',
+            'usa_medicacao_controlada', 'medicacao', 'medicacao_ha_quanto_tempo', 'medicacao_reacoes',
+            'alergias',
+        ]
+        widgets = {
+            'tipo_assistencia': forms.RadioSelect(attrs={'class': 'form-check-input'}),
+            'problema_saude': forms.Textarea(attrs={'rows': 2}),
+            'medicacao_reacoes': forms.Textarea(attrs={'rows': 2}),
+            'alergias': forms.Textarea(attrs={'rows': 2}),
+        }

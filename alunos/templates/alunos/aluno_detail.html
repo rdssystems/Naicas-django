@@ -96,5 +96,40 @@
             </div>
         </div>
     </div>
+    {% if pode_ver_saude_emergencia %}
+    <div class="col-12">
+        <div class="card shadow-sm border-warning-subtle">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 text-uppercase text-muted mb-0"><i class="bi bi-shield-lock"></i> 4. Saúde</h2>
+                    {% if pode_ver_saude_completa %}
+                    <a href="{% url 'alunos:etapa_saude' aluno.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> {% if ficha %}Editar{% else %}Preencher{% endif %}</a>
+                    {% endif %}
+                </div>
+                {% if ficha %}
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-3">Alergias</dt>
+                    <dd class="col-sm-9">{% if ficha.alergias %}<span class="text-danger fw-semibold">{{ ficha.alergias|linebreaksbr }}</span>{% else %}Nenhuma conhecida{% endif %}</dd>
+                    <dt class="col-sm-3">Medicação controlada</dt>
+                    <dd class="col-sm-9">
+                        {% if ficha.usa_medicacao_controlada %}
+                            <span class="fw-semibold">{{ ficha.medicacao }}</span>{% if ficha.medicacao_ha_quanto_tempo %} · há {{ ficha.medicacao_ha_quanto_tempo }}{% endif %}
+                            {% if ficha.medicacao_reacoes %}<div class="text-muted">Reações: {{ ficha.medicacao_reacoes }}</div>{% endif %}
+                        {% else %}Não{% endif %}
+                    </dd>
+                    {% if pode_ver_saude_completa %}
+                    <dt class="col-sm-3">Assistência</dt>
+                    <dd class="col-sm-9">{{ ficha.get_tipo_assistencia_display }}{% if ficha.plano_saude %} ({{ ficha.plano_saude }}){% endif %}</dd>
+                    <dt class="col-sm-3">Problema de saúde</dt>
+                    <dd class="col-sm-9">{% if ficha.possui_problema_saude %}{{ ficha.problema_saude|linebreaksbr }}{% else %}Não{% endif %}</dd>
+                    {% endif %}
+                </dl>
+                {% else %}
+                    <p class="small text-danger mb-0">Ficha de saúde não preenchida.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

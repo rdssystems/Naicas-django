@@ -1,6 +1,6 @@
 """
-Gera alunos FICTÍCIOS para desenvolvimento/demonstração, com as etapas 1 a 3
-preenchidas (dados, endereço, responsáveis, família e contatos de emergência).
+Gera alunos FICTÍCIOS para desenvolvimento/demonstração, com as etapas 1 a 4
+preenchidas (dados, endereço, responsáveis, família, contatos de emergência e saúde).
 
 Parte dos alunos é de irmãos que compartilham a mesma mãe, para exercitar o
 reaproveitamento do responsável pelo CPF. Nunca rodar em produção.
@@ -21,7 +21,7 @@ from django.db import transaction
 from escolas.models import EscolaNaica
 
 from ...models import (
-    Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, MembroFamiliar, Parentesco, Responsavel,
+    Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, FichaSaude, MembroFamiliar, Parentesco, Responsavel,
 )
 
 NOMES_FEMININOS = [
@@ -53,6 +53,10 @@ ESCOLAS = [
 ]
 OCUPACOES = ['Diarista', 'Auxiliar de produção', 'Vendedora', 'Pedreiro', 'Motorista', 'Cozinheira', 'Autônomo']
 BENEFICIOS = ['Bolsa Família', 'BPC', 'Auxílio municipal']
+PLANOS = ['Unimed', 'Plano municipal do servidor', 'Hapvida']
+PROBLEMAS_SAUDE = ['Asma leve', 'Rinite alérgica', 'Diabetes tipo 1', 'Epilepsia controlada']
+MEDICACOES = [('Ritalina 10mg', '1 ano', 'Perda de apetite'), ('Depakene', '2 anos', ''), ('Insulina NPH', '3 anos', '')]
+ALERGIAS = ['Dipirona', 'Amendoim', 'Picada de abelha', 'Lactose', 'Penicilina']
 DDD = '34'
 
 
@@ -78,7 +82,7 @@ def ano_escolar_pela_idade(idade):
 
 
 class Command(BaseCommand):
-    help = 'Cria alunos fictícios (etapas 1 a 3 completas) para desenvolvimento.'
+    help = 'Cria alunos fictícios (etapas 1 a 4 completas) para desenvolvimento.'
 
     def add_arguments(self, parser):
         parser.add_argument('--quantidade', type=int, default=10)
@@ -159,6 +163,23 @@ class Command(BaseCommand):
             return Decimal(self.rng.randrange(600, 1800, 50))
         return Decimal(0)
 
+    def criar_ficha_saude(self, aluno):
+        tipo = self.rng.choices(['SUS', 'PLANO', 'AMBOS'], weights=[7, 1, 2])[0]
+        problema = self.rng.random() < 0.25
+        medicacao = self.rng.choice(MEDICACOES) if self.rng.random() < 0.15 else None
+        FichaSaude.objects.create(
+            aluno=aluno,
+            tipo_assistencia=tipo,
+            plano_saude=self.rng.choice(PLANOS) if tipo != 'SUS' else '',
+            possui_problema_saude=problema,
+            problema_saude=self.rng.choice(PROBLEMAS_SAUDE) if problema else '',
+            usa_medicacao_controlada=bool(medicacao),
+            medicacao=medicacao[0] if medicacao else '',
+            medicacao_ha_quanto_tempo=medicacao[1] if medicacao else '',
+            medicacao_reacoes=medicacao[2] if medicacao else '',
+            alergias=self.rng.choice(ALERGIAS) if self.rng.random() < 0.2 else '',
+        )
+
     def criar_familia(self, escola, filhos):
         sobrenome = self.rng.choice(SOBRENOMES)
         cep, rua, bairro = self.rng.choice(ENDERECOS)
@@ -214,6 +235,7 @@ class Command(BaseCommand):
                 else (self.nome(True, sobrenome), self.rng.choice([Parentesco.TIO, Parentesco.AVO, Parentesco.VIZINHO]), self.celular())
             )
             ContatoEmergencia.objects.create(aluno=aluno, nome=segundo[0], parentesco=segundo[1], celular=segundo[2])
+            self.criar_ficha_saude(aluno)
             alunos.append(aluno)
 
         # Irmãos também entram na composição familiar um do outro.

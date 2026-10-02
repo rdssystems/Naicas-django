@@ -67,6 +67,7 @@ Construir um novo app Django para o **Naicas**: múltiplas escolas/unidades Naic
 - **Etapa 3:** a composição familiar (`MembroFamiliar`) é **opcional**; nela só nome e parentesco são obrigatórios. A etapa conta como concluída com **pelo menos 2 contatos de emergência**. A renda familiar é a soma da renda dos membros, calculada na hora e não armazenada.
 - **Parentesco é uma lista única** (`Parentesco`: Mãe, Pai, Madrasta/Padrasto, Avó/Avô, Tia/Tio, Irmã/Irmão, Prima/Primo, Madrinha/Padrinho, Tutor(a) legal, Vizinha/Vizinho, Amiga/Amigo da família, Outro), usada no responsável, na composição familiar e nos contatos de emergência, sem texto livre.
 - **Responsáveis entram pré-preenchidos na composição familiar** (nome, parentesco, nascimento), com opção de remover. Isso acontece automaticamente só na primeira visita à etapa 3. Depois, um botão "Incluir responsáveis que faltam" aparece quando há responsável fora da lista, para não reinserir quem foi removido de propósito. `MembroFamiliar.responsavel` (FK opcional) guarda a origem da linha.
+- **Etapa 4, Saúde (até a decisão de LGPD pós-MVP):** a ficha é vista e editada só por **Diretor e Coordenador** (o mesmo escopo de visibilidade do aluno). A regra fica em duas funções isoladas em `core/acesso.py`: `pode_ver_saude_completa` (prontuário inteiro) e `pode_ver_saude_emergencia` (só alergias e medicação). Hoje as duas excluem o Monitor; liberar o mínimo de emergência para ele é mudar só a segunda função. A etapa conta como concluída quando a ficha existe. O "Qual(is)" da assistência é obrigatório quando há plano de saúde. Alergia é texto livre, e vazio significa "nenhuma conhecida".
 - **Regras de acesso centralizadas em `core/acesso.py`** (`NivelAcesso`, `is_diretor`, `filtrar_por_escola`, `pode_acessar_oficina`…). Middleware, mixins e todos os apps usam essas funções, sem reimplementar a regra.
 
 ## 3. Arquitetura multi-unidade + 3 níveis de acesso (o núcleo a replicar)
@@ -203,7 +204,7 @@ Matricula             → FK Aluno, escola, oficina, turno, data_inscricao, stat
 - [x] **Etapa 2 — Oficinas:** `TipoOficina`, `Oficina` (dias da semana, status manual, arquivar), designação de Monitores globais
 - [x] **Etapa 3a — Cadastro do aluno:** dados + endereço (ViaCEP), responsáveis reaproveitados por CPF, visibilidade por unidade de cadastro
 - [x] **Etapa 3b — Família e emergência:** membros familiares (opcional, soma de renda) e contatos de emergência (mínimo 2) com linhas dinâmicas
-- [ ] Etapa 3c — Ficha de saúde
+- [x] **Etapa 3c — Ficha de saúde:** FichaSaude com campos condicionais; acesso só Diretor/Coordenador via core.acesso.pode_ver_saude_* (Monitor pendente da decisão LGPD)
 - [ ] Etapa 4 — Anexos
 - [ ] Etapa 5 — Matrícula
 - [ ] Etapa 6 — Frequência

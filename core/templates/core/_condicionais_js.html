@@ -1,0 +1,33 @@
+{% comment %}
+Mostra/esconde blocos conforme respostas de outros campos. Inclua uma vez por página.
+  <div data-mostrar-se="trabalha=True">                    visível se o campo "trabalha" vale True
+  <div data-mostrar-se="tipo=PLANO|AMBOS">                 qualquer uma das alternativas
+  <div data-mostrar-se="trabalha=True;carteira=True">      todas as condições (E)
+Funciona com rádio, select e input. Dispare o evento "change" no form após preencher via JS.
+{% endcomment %}
+<script>
+    (function () {
+        function valor(nome) {
+            const campos = document.querySelectorAll(`[name="${nome}"]`);
+            for (const campo of campos) {
+                if (campo.type === 'radio' || campo.type === 'checkbox') {
+                    if (campo.checked) return campo.value;
+                } else {
+                    return campo.value;
+                }
+            }
+            return '';
+        }
+        function atualizar() {
+            document.querySelectorAll('[data-mostrar-se]').forEach(function (bloco) {
+                const visivel = bloco.dataset.mostrarSe.split(';').every(function (condicao) {
+                    const [nome, alternativas] = condicao.split('=');
+                    return alternativas.split('|').includes(valor(nome));
+                });
+                bloco.classList.toggle('d-none', !visivel);
+            });
+        }
+        document.addEventListener('change', atualizar);
+        atualizar();
+    })();
+</script>
