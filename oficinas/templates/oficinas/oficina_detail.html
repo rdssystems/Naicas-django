@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ oficina.nome }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'oficinas:lista' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</a>
+<div class="d-flex justify-content-between align-items-start mt-2 mb-3">
+    <div>
+        <h1 class="h4 mb-1">{{ oficina.nome }} {% include "oficinas/_status_badge.html" %}</h1>
+        <div class="text-muted">{{ oficina.tipo_oficina }} · {{ oficina.escola }}</div>
+    </div>
+    {% if pode_editar %}
+    <a href="{% url 'oficinas:editar' oficina.pk %}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Dados da oficina</h2>
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Dias</dt><dd class="col-sm-8">{{ oficina.dias_semana_display }}</dd>
+                    <dt class="col-sm-4">Horário</dt><dd class="col-sm-8">{{ oficina.get_turno_display }} · {{ oficina.horario|time:"H:i" }} às {{ oficina.horario_fim|time:"H:i" }}</dd>
+                    <dt class="col-sm-4">Período</dt><dd class="col-sm-8">{{ oficina.data_inicio|date:"d/m/Y" }} a {{ oficina.data_fim|date:"d/m/Y" }}</dd>
+                    <dt class="col-sm-4">Carga horária</dt><dd class="col-sm-8">{{ oficina.carga_horaria }} h</dd>
+                    <dt class="col-sm-4">Vagas</dt><dd class="col-sm-8">{{ oficina.vagas }}</dd>
+                    <dt class="col-sm-4">Endereço</dt><dd class="col-sm-8">{{ oficina.escola.endereco|default:"—" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Monitores</h2>
+                {% for monitor in monitores %}
+                    <div class="mb-2"><i class="bi bi-person-badge"></i> {{ monitor.get_full_name|default:monitor.username }}{% if not monitor.is_active %} <span class="badge text-bg-secondary">inativo</span>{% endif %}</div>
+                {% empty %}
+                    <p class="small text-muted mb-2">Nenhum monitor designado.</p>
+                {% endfor %}
+                {% if oficina.nome_monitor %}
+                    <hr>
+                    <div class="small text-muted">Monitor sem conta no sistema</div>
+                    <div>{{ oficina.nome_monitor }}{% if oficina.telefone_monitor %} · {{ oficina.telefone_monitor }}{% endif %}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-light border mt-3 mb-0 small">
+    <i class="bi bi-info-circle"></i> Alunos matriculados e ficha de frequência aparecem aqui nas próximas etapas.
+</div>
+{% endblock %}

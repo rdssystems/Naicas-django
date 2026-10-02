@@ -14,6 +14,21 @@ Uso: {% include "core/_form_campos.html" with form=form %}
                 {% render_field field class="form-check-input" %}
                 <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
             </div>
+        {% elif field.widget_type == 'checkboxselectmultiple' %}
+            <div class="form-label">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</div>
+            <div class="border rounded p-2 bg-white{% if field.errors %} border-danger{% endif %}" style="max-height: 14rem; overflow-y: auto;">
+                {% for opcao in field %}
+                    <div class="form-check form-check-inline">
+                        {{ opcao.tag }}
+                        <label class="form-check-label" for="{{ opcao.id_for_label }}">{{ opcao.choice_label }}</label>
+                    </div>
+                {% empty %}
+                    <span class="small text-muted">Nenhuma opção disponível.</span>
+                {% endfor %}
+            </div>
+        {% elif field.field.widget.attrs.type == 'color' %}
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% render_field field class="form-control form-control-color" %}
         {% else %}
             <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
             {% if field.widget_type == 'select' %}

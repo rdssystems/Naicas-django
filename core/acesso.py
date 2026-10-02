@@ -83,6 +83,16 @@ def filtrar_por_escola(user, queryset, campo='escola'):
     return queryset.none()
 
 
+def filtrar_oficinas_visiveis(user, queryset):
+    """
+    Oficinas que o usuário pode ver: Diretor todas, Coordenador as da própria
+    unidade, Monitor só as em que está designado (de qualquer unidade).
+    """
+    if is_monitor(user):
+        return queryset.filter(monitores=user)
+    return filtrar_por_escola(user, queryset)
+
+
 def pode_acessar_oficina(user, oficina):
     """
     Lançar chamada / ver matriculados de uma oficina: Diretor, Coordenador da

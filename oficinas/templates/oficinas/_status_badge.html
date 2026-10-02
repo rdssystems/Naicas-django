@@ -1,0 +1,4 @@
+{% if oficina.status == 'ABERTA' %}<span class="badge text-bg-info">{{ oficina.get_status_display }}</span>
+{% elif oficina.status == 'EM_ANDAMENTO' %}<span class="badge text-bg-success">{{ oficina.get_status_display }}</span>
+{% elif oficina.status == 'CONCLUIDO' %}<span class="badge text-bg-secondary">{{ oficina.get_status_display }}</span>
+{% else %}<span class="badge text-bg-light border">{{ oficina.get_status_display }}</span>{% endif %}

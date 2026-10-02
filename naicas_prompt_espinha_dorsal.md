@@ -52,6 +52,11 @@ Construir um novo app Django para o **Naicas**: múltiplas escolas/unidades Naic
 - `nome_monitor`/`telefone_monitor` da `Oficina` continuam como texto livre para quem conduz a oficina sem ter conta no sistema.
 - **Usuários não são excluídos, só desativados** (`is_active`), para preservar o histórico (ex.: `RegistroAula.lancado_por`). O Diretor não pode desativar a própria conta nem alterar o próprio nível.
 - **Unidades não têm exclusão pelo painel** no MVP: elas vão concentrar oficinas, alunos e matrículas.
+- **Tipos de Oficina são por unidade** (como no spec): o Coordenador gerencia os da própria unidade e o Diretor gerencia os de qualquer uma. Um tipo só pode ser excluído se nenhuma oficina usar.
+- **A unidade da Oficina vem do Tipo escolhido** (`oficina.escola = tipo_oficina.escola`), então não há como criar oficina com tipo de outra unidade.
+- **Status da oficina é manual** (Coordenador/Diretor). As datas são só referência.
+- **Oficina tem `dias_semana`** (lista de dias, ex.: seg/qua/sex), obrigatório.
+- **Oficinas não são excluídas, só arquivadas** (status `Arquivado`, fora da lista padrão), preservando matrículas e frequência.
 - **Regras de acesso centralizadas em `core/acesso.py`** (`NivelAcesso`, `is_diretor`, `filtrar_por_escola`, `pode_acessar_oficina`…). Middleware, mixins e todos os apps usam essas funções, sem reimplementar a regra.
 
 ## 3. Arquitetura multi-unidade + 3 níveis de acesso (o núcleo a replicar)
@@ -108,7 +113,7 @@ Já descrita acima.
 
 ### `Oficina` (era `Curso`)
 - `escola` (FK), `tipo_oficina` (FK), `nome`, `carga_horaria`, `vagas`
-- `data_inicio`, `data_fim`, `turno` (Manhã/Tarde/Noite), `horario`, `horario_fim`
+- `data_inicio`, `data_fim`, `turno` (Manhã/Tarde/Noite), `horario`, `horario_fim`, `dias_semana` (seg…dom, um ou mais)
 - `status` (`Aberta` / `Em Andamento` / `Concluído` / `Arquivado`)
 - `nome_monitor`/`telefone_monitor` (quem conduz a oficina — pode ou não ser o usuário logado como Monitor)
 - `monitores` (M2M `User`, só usuários com `nivel_acesso='MONITOR'`, de qualquer unidade) — define em quais oficinas cada Monitor lança frequência (ver seção 2.2)
@@ -185,7 +190,7 @@ Matricula             → FK Aluno, escola, oficina, turno, data_inscricao, stat
 - [x] Divisão em apps Django definida (seção 2.1)
 - [x] Infra base criada: Docker Compose, settings via `.env`, `entrypoint.sh`, `atualizar.sh`
 - [x] **Etapa 1 — Fundação:** `EscolaNaica`, `Profile` + Groups, login/logout, middleware, mixins, CRUD de unidades e usuários (Diretor)
-- [ ] Etapa 2 — Oficinas (`TipoOficina`, `Oficina`, designação de Monitores)
+- [x] **Etapa 2 — Oficinas:** `TipoOficina`, `Oficina` (dias da semana, status manual, arquivar), designação de Monitores globais
 - [ ] Etapa 3 — Cadastro do aluno (3a dados/endereço/responsável, 3b família/emergência, 3c saúde)
 - [ ] Etapa 4 — Anexos
 - [ ] Etapa 5 — Matrícula

@@ -20,6 +20,10 @@
             <div class="collapse navbar-collapse" id="menu">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="{% url 'core:home' %}">Início</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'oficinas:lista' %}">{% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</a></li>
+                    {% if is_diretor or is_coordenador %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'oficinas:tipos' %}">Tipos de oficina</a></li>
+                    {% endif %}
                     {% if is_diretor %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'escolas:lista' %}">Unidades</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'usuarios:lista' %}">Usuários</a></li>

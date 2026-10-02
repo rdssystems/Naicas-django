@@ -1,0 +1,25 @@
+{% extends "core/base.html" %}
+
+{% block title %}{% if tipo %}Editar tipo{% else %}Novo tipo{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <a href="{% url 'oficinas:tipos' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Tipos de oficina</a>
+        <h1 class="h4 mt-2 mb-3">{% if tipo %}Editar {{ tipo.nome }}{% else %}Novo tipo de oficina{% endif %}</h1>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% if is_coordenador %}<p class="small text-muted">Unidade: <strong>{{ active_escola }}</strong></p>{% endif %}
+                    {% include "core/_form_campos.html" with form=form %}
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'oficinas:tipos' %}" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
