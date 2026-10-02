@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 
@@ -35,6 +36,23 @@ class UF(models.TextChoices):
     SP = 'SP', 'SP'
     SE = 'SE', 'SE'
     TO = 'TO', 'TO'
+
+
+class Parentesco(models.TextChoices):
+    """Lista única usada em responsável, composição familiar e contatos de emergência."""
+
+    MAE = 'MAE', 'Mãe'
+    PAI = 'PAI', 'Pai'
+    PADRASTO = 'PADRASTO', 'Madrasta/Padrasto'
+    AVO = 'AVO', 'Avó/Avô'
+    TIO = 'TIO', 'Tia/Tio'
+    IRMAO = 'IRMAO', 'Irmã/Irmão'
+    PRIMO = 'PRIMO', 'Prima/Primo'
+    PADRINHO = 'PADRINHO', 'Madrinha/Padrinho'
+    TUTOR = 'TUTOR', 'Tutor(a) legal'
+    VIZINHO = 'VIZINHO', 'Vizinha/Vizinho'
+    AMIGO = 'AMIGO', 'Amiga/Amigo da família'
+    OUTRO = 'OUTRO', 'Outro'
 
 
 class AlunoQuerySet(models.QuerySet):
@@ -118,11 +136,30 @@ class Aluno(models.Model):
             (1, 'Dados do aluno', 'alunos:etapa_dados', tem_endereco, True),
             # .all() aproveita o prefetch_related da listagem (exists() faria 1 query por aluno).
             (2, 'Responsável', 'alunos:etapa_responsaveis', bool(self.responsaveis_vinculos.all()), True),
-            (3, 'Família e emergência', None, False, False),
+            (3, 'Família e emergência', 'alunos:etapa_familia', len(self.contatos_emergencia.all()) >= 2, True),
             (4, 'Saúde', None, False, False),
             (5, 'Anexos', None, False, False),
             (6, 'Matrícula', None, False, False),
         ]
+
+    def vinculos_fora_da_familia(self):
+        """
+        Responsáveis do aluno que ainda não estão na composição familiar.
+        Compara pelo vínculo (linha pré-preenchida) e também pelo nome, para
+        não duplicar quem foi digitado à mão.
+        """
+        membros = list(self.membros_familia.all())
+        ja_ligados = {m.responsavel_id for m in membros if m.responsavel_id}
+        nomes = {m.nome.strip().casefold() for m in membros}
+        return [
+            v for v in self.responsaveis_vinculos.select_related('responsavel')
+            if v.responsavel_id not in ja_ligados and v.responsavel.nome.strip().casefold() not in nomes
+        ]
+
+    @property
+    def renda_familiar(self):
+        """Soma simples da renda dos membros (sem score/priorização)."""
+        return sum((m.renda_mensal for m in self.membros_familia.all()), start=0)
 
     @property
     def cadastro_completo(self):
@@ -206,19 +243,9 @@ class Responsavel(models.Model):
 
 
 class AlunoResponsavel(models.Model):
-    class GrauParentesco(models.TextChoices):
-        MAE = 'MAE', 'Mãe'
-        PAI = 'PAI', 'Pai'
-        AVO = 'AVO', 'Avó/Avô'
-        TIO = 'TIO', 'Tia/Tio'
-        IRMAO = 'IRMAO', 'Irmã/Irmão'
-        PADRASTO = 'PADRASTO', 'Madrasta/Padrasto'
-        TUTOR = 'TUTOR', 'Tutor(a) legal'
-        OUTRO = 'OUTRO', 'Outro'
-
     aluno = models.ForeignKey(Aluno, on_delete=models.CASCADE, related_name='responsaveis_vinculos')
     responsavel = models.ForeignKey(Responsavel, on_delete=models.PROTECT, related_name='alunos_vinculos')
-    grau_parentesco = models.CharField('grau de parentesco', max_length=20, choices=GrauParentesco.choices)
+    grau_parentesco = models.CharField('grau de parentesco', max_length=20, choices=Parentesco.choices)
 
     class Meta:
         verbose_name = 'vínculo aluno-responsável'
@@ -229,3 +256,44 @@ class AlunoResponsavel(models.Model):
 
     def __str__(self):
         return f'{self.responsavel} ({self.get_grau_parentesco_display()}) de {self.aluno}'
+
+
+class MembroFamiliar(models.Model):
+    aluno = models.ForeignKey(Aluno, on_delete=models.CASCADE, related_name='membros_familia')
+    # Preenchido quando a linha veio de um responsável do aluno (pré-preenchimento
+    # da etapa 3): é como o sistema sabe quem já está na composição familiar.
+    responsavel = models.ForeignKey(
+        Responsavel, verbose_name='responsável de origem', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+',
+    )
+    nome = models.CharField('nome', max_length=150)
+    parentesco = models.CharField('parentesco', max_length=20, choices=Parentesco.choices)
+    data_nascimento = models.DateField('data de nascimento', null=True, blank=True)
+    ocupacao = models.CharField('ocupação', max_length=100, blank=True)
+    renda_mensal = models.DecimalField(
+        'renda mensal (R$)', max_digits=10, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)],
+    )
+
+    class Meta:
+        verbose_name = 'membro familiar'
+        verbose_name_plural = 'membros familiares'
+        ordering = ['pk']
+
+    def __str__(self):
+        return f'{self.nome} ({self.get_parentesco_display()})'
+
+
+class ContatoEmergencia(models.Model):
+    aluno = models.ForeignKey(Aluno, on_delete=models.CASCADE, related_name='contatos_emergencia')
+    nome = models.CharField('nome', max_length=150)
+    parentesco = models.CharField('parentesco', max_length=20, choices=Parentesco.choices)
+    celular = models.CharField('celular', max_length=20)
+
+    class Meta:
+        verbose_name = 'contato de emergência'
+        verbose_name_plural = 'contatos de emergência'
+        ordering = ['pk']
+
+    def __str__(self):
+        return f'{self.nome} ({self.get_parentesco_display()})'

@@ -1,0 +1,104 @@
+{% extends "core/base.html" %}
+
+{% block title %}Família e emergência de {{ aluno.nome }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'alunos:detalhe' aluno.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ aluno.nome }}</a>
+<h1 class="h4 mt-2 mb-3">Família e contatos de emergência</h1>
+
+{% include "alunos/_etapas_nav.html" %}
+
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="card shadow-sm mb-3" data-formset="{{ membros_formset.prefix }}" id="bloco_membros">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h2 class="h6 text-uppercase text-muted mb-0">Composição familiar</h2>
+                <span class="small text-muted">Opcional</span>
+            </div>
+            <p class="small text-muted">Pessoas que moram com o aluno.</p>
+            {% if pre_preenchidos %}
+            <div class="alert alert-info py-2 small">
+                <i class="bi bi-info-circle"></i> Incluímos os responsáveis do aluno. Complete ocupação e renda, e remova quem não mora com ele. Nada é gravado até você clicar em Salvar.
+            </div>
+            {% elif responsaveis_faltando %}
+            <div class="alert alert-light border py-2 small d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span><i class="bi bi-person-plus"></i> Fora da composição familiar: {% for v in responsaveis_faltando %}{{ v.responsavel.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}.</span>
+                <a href="?incluir_responsaveis=1" class="btn btn-sm btn-outline-primary">Incluir responsáveis que faltam</a>
+            </div>
+            {% endif %}
+            {{ membros_formset.management_form }}
+            {% for erro in membros_formset.non_form_errors %}<div class="alert alert-danger py-2 small">{{ erro }}</div>{% endfor %}
+            <div data-formset-linhas>
+                {% for form in membros_formset %}
+                    {% include "alunos/_linha_formset.html" %}
+                {% endfor %}
+            </div>
+            <template data-formset-modelo>
+                {% include "alunos/_linha_formset.html" with form=membros_formset.empty_form %}
+            </template>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-formset-adicionar><i class="bi bi-plus-lg"></i> Adicionar membro</button>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="calcular_renda"><i class="bi bi-calculator"></i> Calcular renda familiar</button>
+                    <span class="fw-semibold" id="renda_total">{% if aluno.renda_familiar %}R$ {{ aluno.renda_familiar|floatformat:"2g" }}{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3" data-formset="{{ contatos_formset.prefix }}">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <h2 class="h6 text-uppercase text-muted mb-0">Contatos de emergência</h2>
+                <span class="small text-muted">Mínimo 2</span>
+            </div>
+            <p class="small text-muted">Quem chamar se algo acontecer com o aluno durante a oficina.</p>
+            {{ contatos_formset.management_form }}
+            {% for erro in contatos_formset.non_form_errors %}<div class="alert alert-danger py-2 small">{{ erro }}</div>{% endfor %}
+            <div data-formset-linhas>
+                {% for form in contatos_formset %}
+                    {% include "alunos/_linha_formset.html" %}
+                {% endfor %}
+            </div>
+            <template data-formset-modelo>
+                {% include "alunos/_linha_formset.html" with form=contatos_formset.empty_form %}
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-formset-adicionar><i class="bi bi-plus-lg"></i> Adicionar contato</button>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'alunos:detalhe' aluno.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+{% include "core/_formset_js.html" %}
+<script>
+    // Soma simples das rendas visíveis (aceita "1.234,56" e "1234.56").
+    (function () {
+        const bloco = document.getElementById('bloco_membros');
+        const saida = document.getElementById('renda_total');
+        function paraNumero(texto) {
+            texto = (texto || '').trim();
+            if (!texto) return 0;
+            if (texto.includes(',')) texto = texto.replace(/\./g, '').replace(',', '.');
+            const n = parseFloat(texto);
+            return isNaN(n) ? 0 : n;
+        }
+        function calcular() {
+            let soma = 0;
+            bloco.querySelectorAll('[data-formset-linha]:not(.d-none) input[name$="-renda_mensal"]').forEach(function (input) {
+                soma += paraNumero(input.value);
+            });
+            saida.textContent = 'R$ ' + soma.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        document.getElementById('calcular_renda').addEventListener('click', calcular);
+        bloco.addEventListener('formset:alterado', function () { if (saida.textContent) calcular(); });
+    })();
+</script>
+{% endblock %}

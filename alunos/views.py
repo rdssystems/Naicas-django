@@ -11,7 +11,9 @@ from core.mixins import PerfilRequiredMixin
 from core.validators import so_digitos
 from escolas.models import EscolaNaica
 
-from .forms import AlunoForm, EnderecoForm, ResponsavelForm
+from .forms import (
+    AlunoForm, ContatoEmergenciaFormSet, EnderecoForm, MembroFamiliarFormSet, ResponsavelForm,
+)
 from .models import Aluno, AlunoResponsavel, Responsavel
 
 
@@ -35,7 +37,7 @@ class AlunoListView(CadastroAlunoMixin, ListView):
 
     def get_queryset(self):
         qs = self.alunos_visiveis().select_related('escola', 'endereco').prefetch_related(
-            'responsaveis_vinculos'
+            'responsaveis_vinculos', 'contatos_emergencia'
         )
         params = self.request.GET
         if busca := params.get('q', '').strip():
@@ -67,6 +69,8 @@ class AlunoDetailView(CadastroAlunoMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['vinculos'] = self.object.responsaveis_vinculos.select_related('responsavel')
+        context['membros'] = self.object.membros_familia.all()
+        context['contatos'] = self.object.contatos_emergencia.all()
         return context
 
 
@@ -148,6 +152,65 @@ class EtapaResponsaveisView(CadastroAlunoMixin, View):
             responsavel = form.save()
         messages.success(request, f'Responsável "{responsavel.nome}" vinculado ao aluno.')
         return redirect('alunos:etapa_responsaveis', pk=aluno.pk)
+
+
+class EtapaFamiliaView(CadastroAlunoMixin, View):
+    """
+    Etapa 3: composição familiar (opcional) e contatos de emergência (mínimo 2).
+
+    Os responsáveis da etapa 2 entram pré-preenchidos na composição familiar
+    na primeira visita (etapa nunca salva) e, depois disso, só quando o
+    usuário pede (?incluir_responsaveis=1) — para não reaparecer quem foi
+    removido de propósito.
+    """
+
+    template_name = 'alunos/etapa_familia.html'
+
+    def get_formsets(self, aluno, data=None, pre_preencher=()):
+        membros = MembroFamiliarFormSet(
+            data, instance=aluno, prefix='membros', form_kwargs={'aluno': aluno},
+            initial=[
+                {
+                    'responsavel': v.responsavel_id,
+                    'nome': v.responsavel.nome,
+                    'parentesco': v.grau_parentesco,
+                    'data_nascimento': v.responsavel.data_nascimento,
+                }
+                for v in pre_preencher
+            ],
+        )
+        # Linhas extras para os pré-preenchidos (o formset só mostra
+        # `initial` em formulários extras).
+        membros.extra = len(pre_preencher)
+        contatos = ContatoEmergenciaFormSet(data, instance=aluno, prefix='contatos')
+        return membros, contatos
+
+    def render(self, aluno, membros, contatos, pre_preenchidos=()):
+        faltando = [] if pre_preenchidos else aluno.vinculos_fora_da_familia()
+        return render(self.request, self.template_name, {
+            'aluno': aluno, 'membros_formset': membros, 'contatos_formset': contatos, 'etapa_atual': 3,
+            'pre_preenchidos': pre_preenchidos, 'responsaveis_faltando': faltando,
+        })
+
+    def get(self, request, pk):
+        aluno = self.get_aluno()
+        nunca_salva = not aluno.membros_familia.exists() and not aluno.contatos_emergencia.exists()
+        pre_preencher = []
+        if nunca_salva or request.GET.get('incluir_responsaveis'):
+            pre_preencher = aluno.vinculos_fora_da_familia()
+        membros, contatos = self.get_formsets(aluno, pre_preencher=pre_preencher)
+        return self.render(aluno, membros, contatos, pre_preencher)
+
+    def post(self, request, pk):
+        aluno = self.get_aluno()
+        membros, contatos = self.get_formsets(aluno, request.POST)
+        if not (membros.is_valid() & contatos.is_valid()):
+            return self.render(aluno, membros, contatos)
+        with transaction.atomic():
+            membros.save()
+            contatos.save()
+        messages.success(request, 'Família e contatos de emergência salvos.')
+        return redirect('alunos:detalhe', pk=aluno.pk)
 
 
 class ResponsavelEditarView(CadastroAlunoMixin, View):

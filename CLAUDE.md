@@ -22,6 +22,7 @@ docker compose up -d --build      # app em http://localhost:8020
 docker compose exec web python manage.py test
 docker compose exec web python manage.py createsuperuser
 docker compose logs -f web
+docker compose exec web python manage.py popular_alunos [--quantidade 10] [--escola <slug>] [--seed 42]  # alunos fictícios (só DEBUG)
 ```
 
 - Portas: web `8020`, Postgres `127.0.0.1:5436` (8000/5434 são do Gestão Qualificação).

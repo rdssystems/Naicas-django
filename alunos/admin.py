@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Aluno, AlunoResponsavel, Endereco, Responsavel
+from .models import Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, MembroFamiliar, Responsavel
 
 
 class EnderecoInline(admin.StackedInline):
@@ -14,12 +14,22 @@ class AlunoResponsavelInline(admin.TabularInline):
     autocomplete_fields = ('responsavel',)
 
 
+class MembroFamiliarInline(admin.TabularInline):
+    model = MembroFamiliar
+    extra = 0
+
+
+class ContatoEmergenciaInline(admin.TabularInline):
+    model = ContatoEmergencia
+    extra = 0
+
+
 @admin.register(Aluno)
 class AlunoAdmin(admin.ModelAdmin):
     list_display = ('nome', 'cpf', 'escola', 'data_nascimento', 'ano_escolar')
     list_filter = ('escola', 'ano_escolar', 'sexo')
     search_fields = ('nome', 'cpf', 'nome_mae')
-    inlines = [EnderecoInline, AlunoResponsavelInline]
+    inlines = [EnderecoInline, AlunoResponsavelInline, MembroFamiliarInline, ContatoEmergenciaInline]
     readonly_fields = ('criado_em', 'atualizado_em', 'criado_por')
 
 

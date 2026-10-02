@@ -1,0 +1,31 @@
+{% load widget_tweaks %}
+{% comment %}
+Uma linha de formset em grade. Precisa de: form.
+O campo DELETE fica escondido e é marcado pelo botão Remover (core/_formset_js.html).
+{% endcomment %}
+<div class="border rounded p-2 mb-2 bg-white{% if form.DELETE.value %} d-none{% endif %}" data-formset-linha>
+    {% for campo in form.hidden_fields %}{{ campo }}{% endfor %}
+    {% if form.responsavel.value %}<div class="small text-primary mb-1"><i class="bi bi-person-check"></i> Responsável do aluno</div>{% endif %}
+    <div class="d-none">{{ form.DELETE }}</div>
+    {% for erro in form.non_field_errors %}<div class="text-danger small">{{ erro }}</div>{% endfor %}
+    <div class="row g-2 align-items-start">
+        {% for campo in form.visible_fields %}
+        {% if campo.name != 'DELETE' %}
+        <div class="{% if campo.name == 'nome' %}col-md-4{% elif campo.name == 'renda_mensal' or campo.name == 'data_nascimento' %}col-md-2{% else %}col-md-3{% endif %}">
+            <label class="form-label small mb-0" for="{{ campo.id_for_label }}">{{ campo.label }}{% if campo.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+            {% if campo.widget_type == 'select' %}
+                {% if campo.errors %}{% render_field campo class="form-select form-select-sm is-invalid" %}{% else %}{% render_field campo class="form-select form-select-sm" %}{% endif %}
+            {% elif campo.errors %}
+                {% render_field campo class="form-control form-control-sm is-invalid" %}
+            {% else %}
+                {% render_field campo class="form-control form-control-sm" %}
+            {% endif %}
+            {% for erro in campo.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        <div class="col-auto ms-auto align-self-end">
+            <button type="button" class="btn btn-sm btn-outline-danger" data-formset-remover title="Remover"><i class="bi bi-trash"></i></button>
+        </div>
+    </div>
+</div>

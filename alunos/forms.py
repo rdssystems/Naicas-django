@@ -1,10 +1,10 @@
 from django import forms
 
 from core import acesso
-from core.forms import DigitosField, sim_nao_field
+from core.forms import DigitosField, MoedaField, sim_nao_field
 from escolas.models import EscolaNaica
 
-from .models import Aluno, AlunoResponsavel, Endereco, Responsavel
+from .models import Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, MembroFamiliar, Parentesco, Responsavel
 
 DATA = forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')
 
@@ -67,7 +67,7 @@ class ResponsavelForm(forms.ModelForm):
     """
 
     cpf = DigitosField(label='CPF', max_length=14, widget=forms.TextInput(attrs={'inputmode': 'numeric', 'placeholder': '000.000.000-00'}))
-    grau_parentesco = forms.ChoiceField(label='Grau de parentesco', choices=AlunoResponsavel.GrauParentesco.choices)
+    grau_parentesco = forms.ChoiceField(label='Grau de parentesco', choices=Parentesco.choices)
     trabalha = sim_nao_field('Trabalha?')
     carteira_assinada = sim_nao_field('Carteira assinada?', required=False)
     contribui_previdencia = sim_nao_field('Contribui com a Previdência?', required=False)
@@ -108,3 +108,31 @@ class ResponsavelForm(forms.ModelForm):
                 grau_parentesco=self.cleaned_data['grau_parentesco'],
             )
         return responsavel
+
+
+class MembroFamiliarForm(forms.ModelForm):
+    renda_mensal = MoedaField(label='Renda mensal (R$)', min_value=0, required=False)
+
+    class Meta:
+        model = MembroFamiliar
+        fields = ['responsavel', 'nome', 'parentesco', 'data_nascimento', 'ocupacao', 'renda_mensal']
+        widgets = {'data_nascimento': DATA, 'responsavel': forms.HiddenInput}
+
+    def __init__(self, *args, aluno, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Só responsáveis deste aluno podem ser a origem de uma linha.
+        self.fields['responsavel'].queryset = Responsavel.objects.filter(alunos_vinculos__aluno=aluno)
+
+    def clean_renda_mensal(self):
+        return self.cleaned_data['renda_mensal'] or 0
+
+
+MembroFamiliarFormSet = forms.inlineformset_factory(
+    Aluno, MembroFamiliar, form=MembroFamiliarForm, extra=0, can_delete=True,
+)
+
+ContatoEmergenciaFormSet = forms.inlineformset_factory(
+    Aluno, ContatoEmergencia,
+    fields=['nome', 'parentesco', 'celular'],
+    extra=0, min_num=2, validate_min=True, can_delete=True,
+)

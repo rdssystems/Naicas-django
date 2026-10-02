@@ -1,0 +1,41 @@
+{% comment %}
+Linhas dinâmicas para formsets do Django. Inclua uma vez por página.
+Marcação esperada (por formset, com prefix = formset.prefix):
+  <div data-formset="PREFIX">                  container com o management_form
+    <div data-formset-linhas>…linhas…</div>    cada linha: [data-formset-linha] com o campo DELETE escondido
+    <template data-formset-modelo>…linha do empty_form (__prefix__)…</template>
+    <button type="button" data-formset-adicionar>
+  Botão de remover dentro da linha: [data-formset-remover]
+Remover marca o DELETE e esconde a linha (o Django ignora/apaga no POST).
+{% endcomment %}
+<script>
+    (function () {
+        document.querySelectorAll('[data-formset]').forEach(function (container) {
+            const prefixo = container.dataset.formset;
+            const total = container.querySelector(`#id_${prefixo}-TOTAL_FORMS`);
+            const linhas = container.querySelector('[data-formset-linhas]');
+            const modelo = container.querySelector('template[data-formset-modelo]');
+
+            container.querySelector('[data-formset-adicionar]').addEventListener('click', function () {
+                const indice = parseInt(total.value, 10);
+                const html = modelo.innerHTML.replace(/__prefix__/g, indice);
+                linhas.insertAdjacentHTML('beforeend', html);
+                total.value = indice + 1;
+                const nova = linhas.lastElementChild;
+                const primeiro = nova.querySelector('input:not([type=hidden]), select');
+                if (primeiro) primeiro.focus();
+                container.dispatchEvent(new Event('formset:alterado'));
+            });
+
+            linhas.addEventListener('click', function (evento) {
+                const botao = evento.target.closest('[data-formset-remover]');
+                if (!botao) return;
+                const linha = botao.closest('[data-formset-linha]');
+                const deletar = linha.querySelector('input[name$="-DELETE"]');
+                if (deletar) deletar.checked = true;
+                linha.classList.add('d-none');
+                container.dispatchEvent(new Event('formset:alterado'));
+            });
+        });
+    })();
+</script>

@@ -64,6 +64,9 @@ Construir um novo app Django para o **Naicas**: múltiplas escolas/unidades Naic
 - O `grau_parentesco` fica só em `AlunoResponsavel` (a mesma pessoa pode ser mãe de um aluno e avó de outro).
 - No documento do responsável, o **número também é obrigatório** (o formulário da Prodaub exigia data/órgão/UF mas não o número, o que não faz sentido).
 - Endereço é preenchido na mesma tela da Etapa 1 (model separado `Endereco`).
+- **Etapa 3:** a composição familiar (`MembroFamiliar`) é **opcional**; nela só nome e parentesco são obrigatórios. A etapa conta como concluída com **pelo menos 2 contatos de emergência**. A renda familiar é a soma da renda dos membros, calculada na hora e não armazenada.
+- **Parentesco é uma lista única** (`Parentesco`: Mãe, Pai, Madrasta/Padrasto, Avó/Avô, Tia/Tio, Irmã/Irmão, Prima/Primo, Madrinha/Padrinho, Tutor(a) legal, Vizinha/Vizinho, Amiga/Amigo da família, Outro), usada no responsável, na composição familiar e nos contatos de emergência, sem texto livre.
+- **Responsáveis entram pré-preenchidos na composição familiar** (nome, parentesco, nascimento), com opção de remover. Isso acontece automaticamente só na primeira visita à etapa 3. Depois, um botão "Incluir responsáveis que faltam" aparece quando há responsável fora da lista, para não reinserir quem foi removido de propósito. `MembroFamiliar.responsavel` (FK opcional) guarda a origem da linha.
 - **Regras de acesso centralizadas em `core/acesso.py`** (`NivelAcesso`, `is_diretor`, `filtrar_por_escola`, `pode_acessar_oficina`…). Middleware, mixins e todos os apps usam essas funções, sem reimplementar a regra.
 
 ## 3. Arquitetura multi-unidade + 3 níveis de acesso (o núcleo a replicar)
@@ -199,7 +202,7 @@ Matricula             → FK Aluno, escola, oficina, turno, data_inscricao, stat
 - [x] **Etapa 1 — Fundação:** `EscolaNaica`, `Profile` + Groups, login/logout, middleware, mixins, CRUD de unidades e usuários (Diretor)
 - [x] **Etapa 2 — Oficinas:** `TipoOficina`, `Oficina` (dias da semana, status manual, arquivar), designação de Monitores globais
 - [x] **Etapa 3a — Cadastro do aluno:** dados + endereço (ViaCEP), responsáveis reaproveitados por CPF, visibilidade por unidade de cadastro
-- [ ] Etapa 3b — Família e contatos de emergência
+- [x] **Etapa 3b — Família e emergência:** membros familiares (opcional, soma de renda) e contatos de emergência (mínimo 2) com linhas dinâmicas
 - [ ] Etapa 3c — Ficha de saúde
 - [ ] Etapa 4 — Anexos
 - [ ] Etapa 5 — Matrícula
