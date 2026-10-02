@@ -84,6 +84,13 @@ Construir um novo app Django para o **Naicas**: múltiplas escolas/unidades Naic
   - O Coordenador matricula alunos de outra unidade pelo CPF (vê só nome, nascimento e unidade antes de matricular). Depois disso passa a ver o cadastro.
   - A lista de matriculados de uma oficina é acessível a Diretor, Coordenador da unidade e **Monitor designado** (nome, idade, ano escolar, situação). O alerta de alergia/medicação só aparece se `pode_ver_saude_emergencia` permitir.
   - Por causa da dependência numa direção só, a lista de matriculados e a matrícula moram no app `matriculas`. `oficinas` só tem um link, e `alunos` ganha a visibilidade "matriculado na unidade" via registro (`alunos/visibilidade.py`).
+- **Frequência (padrões adotados, ajustáveis):**
+  - A data da aula fica entre o início e o fim da oficina e **nunca no futuro**. Lançar em dia que não é da oficina é permitido (reposição), com aviso. Oficina arquivada não recebe chamada.
+  - A chamada lista as matrículas **ativas na data da aula**: inscrição até a data, e ainda cursando ou encerrada depois dela.
+  - Todos começam marcados como **Presente**, para agilizar no celular. O Monitor marca as faltas.
+  - A chamada pode ser corrigida depois por quem tem acesso à oficina. `RegistroAula` guarda quem lançou e quem alterou por último.
+  - **% de frequência = (P + J) ÷ aulas.** Falta justificada não conta como falta.
+  - Só Diretor e Coordenador excluem uma aula lançada por engano. O Monitor só lança e corrige.
 - **Etapas do cadastro são um registro** (`alunos/etapas.py`): `anexos` e `matriculas` registram as etapas 5 e 6 no `ready()` do próprio app. Assim `alunos` não importa esses apps (dependência numa só direção). A matrícula (etapa 6) não conta para o selo, porque o aluno pode estar completo e na fila de espera.
 - **Regras de acesso centralizadas em `core/acesso.py`** (`NivelAcesso`, `is_diretor`, `filtrar_por_escola`, `pode_acessar_oficina`…). Middleware, mixins e todos os apps usam essas funções, sem reimplementar a regra.
 
@@ -224,7 +231,8 @@ Matricula             → FK Aluno, escola, oficina, turno, data_inscricao, stat
 - [x] **Etapa 3c — Ficha de saúde:** FichaSaude com campos condicionais; acesso só Diretor/Coordenador via core.acesso.pode_ver_saude_* (Monitor pendente da decisão LGPD)
 - [x] **Etapa 4 — Anexos:** tipos de documento (Diretor), envio de PDF/imagem com validação de conteúdo, download só por view autenticada, obrigatórios bloqueiam o selo; etapas do cadastro viraram registro (`alunos/etapas.py`)
 - [x] **Etapa 5 — Matrícula:** vagas com trava no banco, choque de horário, incompleto pode, matrícula por CPF entre unidades, lista de matriculados para o Monitor designado, concluir/desistência com data
-- [ ] Etapa 6 — Frequência
+- [x] **Etapa 6 — Frequência:** chamada P/F/J por data (uma aula por dia), lançada/corrigida por Diretor, Coordenador e Monitor designado, resumo com % por aluno
+- [x] **MVP completo** (2026-10-02)
 - [ ] *(pós-MVP)* Definir o domínio/VPS de destino (`ALLOWED_HOSTS` e o `HEALTHCHECK_HOST` do `atualizar.sh`)
 - [ ] *(pós-MVP)* Decidir a regra de visualização de `FichaSaude` por nível de acesso (sugestão: Monitor vê só alergias/medicação)
 - [ ] *(pós-MVP)* Integrar ao SSO Keycloak `desenvolvimento-social`

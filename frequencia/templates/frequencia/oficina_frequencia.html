@@ -1,0 +1,86 @@
+{% extends "core/base.html" %}
+
+{% block title %}Frequência · {{ oficina.nome }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'oficinas:detalhe' oficina.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ oficina.nome }}</a>
+<h1 class="h4 mt-2 mb-1">Ficha de frequência</h1>
+<p class="text-muted">{{ oficina.nome }} · {{ oficina.escola }} · {{ oficina.dias_semana_display }} {{ oficina.horario|time:"H:i" }}–{{ oficina.horario_fim|time:"H:i" }}</p>
+
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" action="{% url 'frequencia:chamada' oficina.pk %}" class="row g-2 align-items-end">
+            <div class="col-sm-5 col-md-4">
+                <label class="form-label small mb-1" for="data">Data da aula</label>
+                <input type="date" name="data" id="data" class="form-control" value="{{ data_sugerida|date:'Y-m-d' }}"
+                       min="{{ oficina.data_inicio|date:'Y-m-d' }}" max="{{ hoje|date:'Y-m-d' }}" required>
+            </div>
+            <div class="col-sm-auto d-grid">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check2-square"></i> Lançar / corrigir chamada</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">Aulas lançadas</h2>
+                {% for aula in aulas %}
+                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <a href="{% url 'frequencia:chamada' oficina.pk %}?data={{ aula.data_aula|date:'Y-m-d' }}" class="fw-semibold text-decoration-none">{{ aula.data_aula|date:"d/m/Y" }} <span class="text-muted fw-normal small">{{ aula.data_aula|date:"l" }}</span></a>
+                        <div class="small text-muted">
+                            <span class="text-success">{{ aula.presentes }} P</span> ·
+                            <span class="text-danger">{{ aula.faltas }} F</span> ·
+                            <span class="text-warning-emphasis">{{ aula.justificadas }} J</span>
+                            {% if aula.lancado_por %} · por {{ aula.lancado_por.get_full_name|default:aula.lancado_por.username }}{% endif %}
+                        </div>
+                    </div>
+                    {% if pode_excluir %}
+                    <form method="post" action="{% url 'frequencia:excluir_aula' oficina.pk aula.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-link text-danger" title="Excluir chamada"
+                                onclick="return confirm('Excluir a chamada de {{ aula.data_aula|date:'d/m/Y' }}? As presenças desse dia serão apagadas.');"><i class="bi bi-trash"></i></button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% empty %}
+                    <p class="small text-muted mb-0">Nenhuma chamada lançada ainda.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-1">Resumo por aluno</h2>
+                <p class="small text-muted">Frequência = (presenças + justificadas) ÷ aulas.</p>
+                {% if resumo %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0 small">
+                        <thead><tr><th>Aluno</th><th class="text-center">P</th><th class="text-center">F</th><th class="text-center">J</th><th class="text-end">Frequência</th></tr></thead>
+                        <tbody>
+                        {% for item in resumo %}
+                            {% with m=item.matricula %}
+                            <tr>
+                                <td>{{ m.aluno.nome }}{% if m.status != 'CURSANDO' %} <span class="text-muted">({{ m.get_status_display|lower }})</span>{% endif %}</td>
+                                <td class="text-center">{{ m.presentes }}</td>
+                                <td class="text-center">{{ m.faltas }}</td>
+                                <td class="text-center">{{ m.justificadas }}</td>
+                                <td class="text-end fw-semibold {% if item.percentual < 75 %}text-danger{% endif %}">{{ item.percentual }}%</td>
+                            </tr>
+                            {% endwith %}
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="small text-muted mb-0">O resumo aparece depois da primeira chamada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "core/base.html" %}
+
+{% block title %}Chamada {{ data|date:"d/m/Y" }} · {{ oficina.nome }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'frequencia:oficina' oficina.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Frequência de {{ oficina.nome }}</a>
+<h1 class="h4 mt-2 mb-1">Chamada de {{ data|date:"d/m/Y" }} <span class="text-muted fs-6">{{ data|date:"l" }}</span></h1>
+<p class="text-muted mb-3">{{ oficina.nome }} · {{ oficina.escola }}
+    {% if registro %}· <span class="badge text-bg-info">Corrigindo chamada já lançada</span>{% endif %}
+</p>
+
+{% if aviso %}<div class="alert alert-warning small"><i class="bi bi-calendar-event"></i> {{ aviso }}</div>{% endif %}
+
+{% if linhas %}
+<form method="post" id="form_chamada">
+    {% csrf_token %}
+    <input type="hidden" name="data" value="{{ data|date:'Y-m-d' }}">
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small text-muted">{{ linhas|length }} aluno{{ linhas|length|pluralize }}</span>
+        <button type="button" class="btn btn-sm btn-outline-success" id="todos_presentes"><i class="bi bi-check-all"></i> Todos presentes</button>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <ul class="list-group list-group-flush">
+        {% for linha in linhas %}
+            {% with m=linha.matricula atual=linha.chamada.status_presenca|default:'P' %}
+            <li class="list-group-item py-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="fw-semibold">{{ m.aluno.nome }}</span>
+                    <div class="btn-group" role="group" aria-label="Presença de {{ m.aluno.nome }}">
+                        {% for valor, rotulo in presencas %}
+                            <input type="radio" class="btn-check" name="presenca_{{ m.pk }}" id="p_{{ m.pk }}_{{ valor }}" value="{{ valor }}" autocomplete="off" {% if atual == valor %}checked{% endif %}>
+                            <label class="btn {% if valor == 'P' %}btn-outline-success{% elif valor == 'F' %}btn-outline-danger{% else %}btn-outline-warning{% endif %} px-3" for="p_{{ m.pk }}_{{ valor }}" title="{{ rotulo }}">{{ valor }}</label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <input type="text" name="obs_{{ m.pk }}" value="{{ linha.chamada.observacoes|default:'' }}" maxlength="255"
+                       class="form-control form-control-sm mt-2" placeholder="Observação (ex.: motivo da falta justificada)">
+            </li>
+            {% endwith %}
+        {% endfor %}
+        </ul>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label small" for="observacoes">Observações da aula</label>
+        <textarea name="observacoes" id="observacoes" rows="2" class="form-control" placeholder="Conteúdo trabalhado, ocorrências…">{{ registro.observacoes|default:'' }}</textarea>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'frequencia:oficina' oficina.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar chamada</button>
+    </div>
+</form>
+{% else %}
+<div class="alert alert-light border">Nenhum aluno matriculado nesta oficina em {{ data|date:"d/m/Y" }}.</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const botao = document.getElementById('todos_presentes');
+        if (!botao) return;
+        botao.addEventListener('click', function () {
+            document.querySelectorAll('#form_chamada input.btn-check[value="P"]').forEach(function (r) { r.checked = true; });
+        });
+    })();
+</script>
+{% endblock %}
