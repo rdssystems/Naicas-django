@@ -74,6 +74,16 @@ Construir um novo app Django para o **Naicas**: múltiplas escolas/unidades Naic
   - Os tipos de documento são geridos pelo **Diretor numa tela do painel** (contas de Diretor não têm acesso ao Django Admin). Um tipo em uso não é excluído, só desativado.
   - Obrigatórios por padrão (o Diretor pode mudar): certidão de nascimento ou RG do aluno, CPF do aluno, documento com foto do responsável, comprovante de endereço, declaração de matrícula escolar e termo de autorização de uso de imagem. Opcionais: cartão SUS, comprovante de NIS/CadÚnico, laudo médico e foto 3x4.
   - Os arquivos **nunca são servidos publicamente**: só por uma view autenticada que checa a visibilidade do aluno (também em dev). Ficam gravados sem o nome original no caminho, e excluir o anexo apaga o arquivo do disco.
+- **Etapa 6, Matrícula:**
+  - **Respeita o limite de vagas** da oficina: só matrículas "cursando" ocupam vaga. A checagem trava a oficina no banco (`select_for_update`), para duas matrículas simultâneas não estourarem o limite.
+  - **O aluno pode estar em várias oficinas ao mesmo tempo, desde que não haja choque**: há conflito quando as duas oficinas têm dia da semana em comum, horários que se sobrepõem e períodos (início/fim) que se cruzam.
+  - **Aluno com cadastro incompleto também pode ser matriculado** (a tela só avisa).
+  - Só se matricula em oficina **Aberta ou Em andamento**. Não pode haver duas matrículas "cursando" do mesmo aluno na mesma oficina.
+  - `escola` e `turno` da matrícula vêm da oficina (gravados para histórico).
+  - Concluir e desistir são ações com data. Para voltar, faz-se uma nova matrícula, e o histórico fica.
+  - O Coordenador matricula alunos de outra unidade pelo CPF (vê só nome, nascimento e unidade antes de matricular). Depois disso passa a ver o cadastro.
+  - A lista de matriculados de uma oficina é acessível a Diretor, Coordenador da unidade e **Monitor designado** (nome, idade, ano escolar, situação). O alerta de alergia/medicação só aparece se `pode_ver_saude_emergencia` permitir.
+  - Por causa da dependência numa direção só, a lista de matriculados e a matrícula moram no app `matriculas`. `oficinas` só tem um link, e `alunos` ganha a visibilidade "matriculado na unidade" via registro (`alunos/visibilidade.py`).
 - **Etapas do cadastro são um registro** (`alunos/etapas.py`): `anexos` e `matriculas` registram as etapas 5 e 6 no `ready()` do próprio app. Assim `alunos` não importa esses apps (dependência numa só direção). A matrícula (etapa 6) não conta para o selo, porque o aluno pode estar completo e na fila de espera.
 - **Regras de acesso centralizadas em `core/acesso.py`** (`NivelAcesso`, `is_diretor`, `filtrar_por_escola`, `pode_acessar_oficina`…). Middleware, mixins e todos os apps usam essas funções, sem reimplementar a regra.
 
@@ -213,7 +223,7 @@ Matricula             → FK Aluno, escola, oficina, turno, data_inscricao, stat
 - [x] **Etapa 3b — Família e emergência:** membros familiares (opcional, soma de renda) e contatos de emergência (mínimo 2) com linhas dinâmicas
 - [x] **Etapa 3c — Ficha de saúde:** FichaSaude com campos condicionais; acesso só Diretor/Coordenador via core.acesso.pode_ver_saude_* (Monitor pendente da decisão LGPD)
 - [x] **Etapa 4 — Anexos:** tipos de documento (Diretor), envio de PDF/imagem com validação de conteúdo, download só por view autenticada, obrigatórios bloqueiam o selo; etapas do cadastro viraram registro (`alunos/etapas.py`)
-- [ ] Etapa 5 — Matrícula
+- [x] **Etapa 5 — Matrícula:** vagas com trava no banco, choque de horário, incompleto pode, matrícula por CPF entre unidades, lista de matriculados para o Monitor designado, concluir/desistência com data
 - [ ] Etapa 6 — Frequência
 - [ ] *(pós-MVP)* Definir o domínio/VPS de destino (`ALLOWED_HOSTS` e o `HEALTHCHECK_HOST` do `atualizar.sh`)
 - [ ] *(pós-MVP)* Decidir a regra de visualização de `FichaSaude` por nível de acesso (sugestão: Monitor vê só alergias/medicação)

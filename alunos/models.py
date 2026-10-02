@@ -7,7 +7,7 @@ from django.db.models import Q
 from core import acesso
 from core.validators import validar_cep, validar_cpf, validar_nis
 
-from . import etapas
+from . import etapas, visibilidade
 
 
 class UF(models.TextChoices):
@@ -60,14 +60,21 @@ class Parentesco(models.TextChoices):
 class AlunoQuerySet(models.QuerySet):
     def visiveis_para(self, user):
         """
-        Diretor: todos. Coordenador: cadastrados na unidade dele (e, a partir da
-        Etapa 5, os matriculados em oficinas dela). Monitor: nenhum — ele não
-        acessa o cadastro, só a lista de matriculados das oficinas dele.
+        Diretor: todos. Coordenador: cadastrados na unidade dele + critérios
+        registrados por outros apps (ex.: matriculados em oficinas dela, ver
+        alunos/visibilidade.py). Monitor: nenhum — ele não acessa o cadastro,
+        só a lista de matriculados das oficinas dele.
         """
         if acesso.is_diretor(user):
             return self
         if acesso.is_coordenador(user):
-            return self.filter(Q(escola=acesso.escola_do_usuario(user)))
+            escola = acesso.escola_do_usuario(user)
+            filtro = Q(escola=escola)
+            for criterio in visibilidade.criterios_coordenador(escola):
+                filtro |= criterio
+            # Subquery em vez de distinct(): critérios com JOIN (ex.: matrículas)
+            # não duplicam linhas e o queryset continua aceitando qualquer ordenação.
+            return self.filter(pk__in=Aluno.objects.filter(filtro).values('pk'))
         return self.none()
 
 
