@@ -5,7 +5,8 @@
 {% block content %}
 <h1 class="h4 mb-1">Olá, {{ user.first_name|default:user.username }}</h1>
 <p class="text-muted mb-4">
-    {% if is_diretor %}Você tem acesso a toda a rede Naica.
+    {% if is_diretor and escola_em_foco %}Você está dentro da unidade <strong>{{ escola_em_foco.nome }}</strong>. Use o seletor no topo para trocar de unidade ou voltar à visão geral.
+    {% elif is_diretor %}Visão geral de toda a rede Naica. Use o seletor de unidade no topo para entrar em uma escola.
     {% elif is_coordenador %}Unidade: <strong>{{ active_escola }}</strong>
     {% elif is_monitor %}Aqui você encontra as oficinas em que está designado.{% endif %}
 </p>

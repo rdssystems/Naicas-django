@@ -7,7 +7,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h1 class="h4 mb-0">Alunos</h1>
-        {% if is_coordenador %}<div class="small text-muted">{{ active_escola }}</div>{% endif %}
+        {% if active_escola %}<div class="small text-muted">{{ active_escola }}</div>{% endif %}
     </div>
     <a href="{% url 'alunos:criar' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Novo aluno</a>
 </div>
@@ -39,7 +39,7 @@
                     <th>Aluno</th>
                     <th>CPF</th>
                     <th>Nascimento</th>
-                    {% if is_diretor %}<th>Unidade</th>{% endif %}
+                    {% if is_diretor and not escola_em_foco %}<th>Unidade</th>{% endif %}
                     <th>Cadastro</th>
                 </tr>
             </thead>
@@ -52,7 +52,7 @@
                     </td>
                     <td class="text-nowrap">{{ aluno.cpf|cpf }}</td>
                     <td>{{ aluno.data_nascimento|date:"d/m/Y" }}</td>
-                    {% if is_diretor %}<td>{{ aluno.escola }}</td>{% endif %}
+                    {% if is_diretor and not escola_em_foco %}<td>{{ aluno.escola }}</td>{% endif %}
                     <td>
                         {% if aluno.cadastro_completo %}<span class="badge text-bg-success">Completo</span>
                         {% else %}<span class="badge text-bg-warning">Incompleto</span>{% endif %}

@@ -53,7 +53,8 @@ class AlunoListView(CadastroAlunoMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if acesso.is_diretor(self.request.user):
+        # Filtro de unidade só na visão geral do Diretor (dentro de uma unidade é redundante).
+        if acesso.is_diretor(self.request.user) and not acesso.escola_em_foco(self.request.user):
             context['escolas'] = EscolaNaica.objects.all()
         filtros = self.request.GET.copy()
         filtros.pop('page', None)

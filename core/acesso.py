@@ -61,6 +61,25 @@ def tem_acesso_ao_sistema(user):
     return is_diretor(user) or is_coordenador(user) or is_monitor(user)
 
 
+def escola_em_foco(user):
+    """
+    Unidade em que o Diretor "entrou" (escolhida na barra, guardada na sessão
+    pelo app escolas, que põe o atributo `escola_em_foco` no usuário).
+    None = visão geral. Só vale para Diretor: o foco não dá poder a ninguém,
+    ele apenas RESTRINGE o que o Diretor vê.
+    """
+    return getattr(user, 'escola_em_foco', None) if is_diretor(user) else None
+
+
+def escola_ativa(user):
+    """
+    Unidade em que o usuário está operando agora (nome na barra, filtros):
+    a fixa do Coordenador ou a escolhida pelo Diretor. Regra de ouro: a
+    escola do Profile vem primeiro e nunca é sobrescrita pelo foco.
+    """
+    return escola_do_usuario(user) or escola_em_foco(user)
+
+
 def pode_gerenciar_escola(user, escola_id):
     """Diretor gerencia qualquer unidade; Coordenador só a própria."""
     if is_diretor(user):
@@ -72,12 +91,14 @@ def pode_gerenciar_escola(user, escola_id):
 
 def filtrar_por_escola(user, queryset, campo='escola'):
     """
-    Restringe um queryset à unidade do usuário. Diretor vê tudo, Coordenador
-    só a própria unidade, qualquer outro caso (Monitor incluso) não vê nada:
-    o escopo do Monitor é por oficina, não por unidade.
+    Restringe um queryset à unidade do usuário. Diretor vê tudo (ou só a
+    unidade em foco, se entrou numa), Coordenador só a própria unidade,
+    qualquer outro caso (Monitor incluso) não vê nada: o escopo do Monitor é
+    por oficina, não por unidade.
     """
     if is_diretor(user):
-        return queryset
+        foco = escola_em_foco(user)
+        return queryset.filter(**{campo: foco}) if foco else queryset
     if is_coordenador(user):
         return queryset.filter(**{campo: escola_do_usuario(user)})
     return queryset.none()

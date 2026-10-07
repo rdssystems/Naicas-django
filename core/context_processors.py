@@ -9,4 +9,5 @@ def papel(request):
         'is_coordenador': acesso.is_coordenador(user),
         'is_monitor': acesso.is_monitor(user),
         'active_escola': getattr(request, 'active_escola', None),
+        'escola_em_foco': acesso.escola_em_foco(user),
     }

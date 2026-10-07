@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h1 class="h4 mb-0">{% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</h1>
-        {% if is_coordenador %}<div class="small text-muted">{{ active_escola }}</div>{% endif %}
+        {% if active_escola %}<div class="small text-muted">{{ active_escola }}</div>{% endif %}
     </div>
     {% if not is_monitor %}
     <a href="{% url 'oficinas:criar' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nova oficina</a>
@@ -47,7 +47,7 @@
             <thead class="table-light">
                 <tr>
                     <th>Oficina</th>
-                    {% if not is_coordenador %}<th>Unidade</th>{% endif %}
+                    {% if not active_escola %}<th>Unidade</th>{% endif %}
                     <th>Dias e horário</th>
                     <th>Período</th>
                     <th>Vagas</th>
@@ -64,7 +64,7 @@
                             <span class="d-inline-block rounded-circle me-1" style="width: .6rem; height: .6rem; background: {{ oficina.tipo_oficina.cor|default:'#adb5bd' }};"></span>{{ oficina.tipo_oficina }}
                         </div>
                     </td>
-                    {% if not is_coordenador %}<td>{{ oficina.escola }}</td>{% endif %}
+                    {% if not active_escola %}<td>{{ oficina.escola }}</td>{% endif %}
                     <td>
                         {{ oficina.dias_semana_display }}
                         <div class="small text-muted">{{ oficina.get_turno_display }} · {{ oficina.horario|time:"H:i" }}–{{ oficina.horario_fim|time:"H:i" }}</div>

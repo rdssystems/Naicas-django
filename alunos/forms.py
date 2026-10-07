@@ -36,6 +36,8 @@ class AlunoForm(forms.ModelForm):
         else:
             self.fields['escola'].queryset = EscolaNaica.objects.all()
             self.fields['escola'].help_text = 'Unidade responsável pelo cadastro deste aluno.'
+            if not self.instance.pk and (foco := acesso.escola_em_foco(user)):
+                self.initial.setdefault('escola', foco.pk)
 
     def clean_cpf(self):
         cpf = self.cleaned_data['cpf']

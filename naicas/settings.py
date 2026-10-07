@@ -102,7 +102,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.middleware.ActiveEscolaMiddleware',  # depende do request.user
+    'escolas.foco.EscolaEmFocoMiddleware',     # unidade em que o Diretor entrou (sessão)
+    'core.middleware.ActiveEscolaMiddleware',  # depende do request.user e do foco acima
 ]
 
 ROOT_URLCONF = 'naicas.urls'
@@ -118,6 +119,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.papel',
+                'escolas.foco.unidades',
             ],
         },
     },

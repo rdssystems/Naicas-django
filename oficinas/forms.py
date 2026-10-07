@@ -24,6 +24,8 @@ class TipoOficinaForm(forms.ModelForm):
             self.instance.escola = acesso.escola_do_usuario(user)
         else:
             self.fields['escola'].queryset = EscolaNaica.objects.all()
+            if not self.instance.pk and (foco := acesso.escola_em_foco(user)):
+                self.initial.setdefault('escola', foco.pk)
         if not self.instance.pk:
             # input type=color não tem "vazio"; começa no azul do tema.
             self.initial.setdefault('cor', '#0d6efd')

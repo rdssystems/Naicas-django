@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Naicas</title>
+  <rect width="64" height="64" rx="14" fill="#0d6efd"/>
+  <!-- base do capelo -->
+  <path d="M17 31 L32 38 L47 31 L47 42 Q32 51 17 42 Z" fill="#ffffff" fill-opacity="0.85"/>
+  <!-- topo do capelo -->
+  <path d="M32 13 L59 26 L32 39 L5 26 Z" fill="#ffffff"/>
+  <!-- borla -->
+  <path d="M51 29.5 V42" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="51" cy="45" r="3.5" fill="#ffffff"/>
+</svg>

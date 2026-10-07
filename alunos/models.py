@@ -60,22 +60,26 @@ class Parentesco(models.TextChoices):
 class AlunoQuerySet(models.QuerySet):
     def visiveis_para(self, user):
         """
-        Diretor: todos. Coordenador: cadastrados na unidade dele + critérios
+        Diretor: todos (ou os da unidade em foco). Coordenador: cadastrados na unidade dele + critérios
         registrados por outros apps (ex.: matriculados em oficinas dela, ver
         alunos/visibilidade.py). Monitor: nenhum — ele não acessa o cadastro,
         só a lista de matriculados das oficinas dele.
         """
         if acesso.is_diretor(user):
-            return self
+            foco = acesso.escola_em_foco(user)
+            # Diretor dentro de uma unidade vê o mesmo que o Coordenador dela.
+            return self.da_unidade(foco) if foco else self
         if acesso.is_coordenador(user):
-            escola = acesso.escola_do_usuario(user)
-            filtro = Q(escola=escola)
-            for criterio in visibilidade.criterios_coordenador(escola):
-                filtro |= criterio
-            # Subquery em vez de distinct(): critérios com JOIN (ex.: matrículas)
-            # não duplicam linhas e o queryset continua aceitando qualquer ordenação.
-            return self.filter(pk__in=Aluno.objects.filter(filtro).values('pk'))
+            return self.da_unidade(acesso.escola_do_usuario(user))
         return self.none()
+
+    def da_unidade(self, escola):
+        filtro = Q(escola=escola)
+        for criterio in visibilidade.criterios_coordenador(escola):
+            filtro |= criterio
+        # Subquery em vez de distinct(): critérios com JOIN (ex.: matrículas)
+        # não duplicam linhas e o queryset continua aceitando qualquer ordenação.
+        return self.filter(pk__in=Aluno.objects.filter(filtro).values('pk'))
 
 
 class Aluno(models.Model):
