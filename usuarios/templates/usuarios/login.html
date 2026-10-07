@@ -3,30 +3,37 @@
 
 {% block title %}Entrar{% endblock %}
 
+{# Sem barra do topo: a fita grande do cabeçalho já faz o papel da marca. #}
+{% block navbar %}{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-sm-10 col-md-6 col-lg-4">
-        <div class="card shadow-sm mt-4">
+        <header class="login-cabecalho">
+            <span class="fita fita-grande">Naicas</span>
+            <p>Secretaria de Desenvolvimento Social</p>
+        </header>
+        <div class="card shadow-sm">
             <div class="card-body p-4">
-                <h1 class="h5 mb-4 text-center">Entrar no Naicas</h1>
                 {% if form.errors %}
-                    <div class="alert alert-danger small">Usuário ou senha incorretos.</div>
+                    <div class="alert alert-danger small">Usuário ou senha incorretos. Confira e tente de novo.</div>
                 {% endif %}
                 <form method="post">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ next }}">
                     <div class="mb-3">
                         <label class="form-label" for="{{ form.username.id_for_label }}">Nome de usuário</label>
-                        {% render_field form.username class="form-control" autofocus="autofocus" %}
+                        {% render_field form.username class="form-control form-control-lg" autofocus="autofocus" autocapitalize="none" %}
                     </div>
                     <div class="mb-4">
                         <label class="form-label" for="{{ form.password.id_for_label }}">Senha</label>
-                        {% render_field form.password class="form-control" %}
+                        {% render_field form.password class="form-control form-control-lg" %}
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Entrar</button>
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Entrar</button>
                 </form>
             </div>
         </div>
+        <p class="small text-muted text-center mt-3">Esqueceu a senha? Fale com a direção da rede.</p>
     </div>
 </div>
 {% endblock %}

@@ -1,0 +1,278 @@
+/*
+ * Identidade visual do Naicas: "material de escola de verdade".
+ * Cores dos materiais das oficinas e do cerrado; Lexend (legibilidade) no app
+ * todo; a fita crepe escrita a caneta (Kalam) é a assinatura e aparece só onde
+ * diz "onde você está" (unidade na barra, login).
+ *
+ * Carregado DEPOIS do Bootstrap: sobrescreve variáveis, não reescreve componentes.
+ */
+
+:root {
+    /* Tokens */
+    --naicas-anil: #2b3a8c;
+    --naicas-anil-escuro: #1f2a6b;
+    --naicas-anil-claro: #e6e9f6;
+    --naicas-urucum: #c8471f;
+    --naicas-ipe: #f2b705;
+    --naicas-folha: #2e7a4c;
+    --naicas-papel: #f3f4f8;
+    --naicas-grafite: #1e2230;
+    --naicas-linha: #dfe2ec;
+    --naicas-fita: #eadcae;
+    --naicas-fita-texto: #4a3b17;
+    /* Cargos (etiqueta na barra): tons claros, legíveis sobre o anil */
+    --naicas-cargo-diretor: var(--naicas-ipe);
+    --naicas-cargo-coordenador: #9ad7b0;
+    --naicas-cargo-monitor: #f6b195;
+
+    /* Bootstrap: cores */
+    --bs-primary: var(--naicas-anil);
+    --bs-primary-rgb: 43, 58, 140;
+    --bs-success: var(--naicas-folha);
+    --bs-success-rgb: 46, 122, 76;
+    --bs-danger: var(--naicas-urucum);
+    --bs-danger-rgb: 200, 71, 31;
+    --bs-warning: var(--naicas-ipe);
+    --bs-warning-rgb: 242, 183, 5;
+    --bs-info: #4a64c8;
+    --bs-info-rgb: 74, 100, 200;
+
+    --bs-primary-text-emphasis: var(--naicas-anil-escuro);
+    --bs-primary-bg-subtle: var(--naicas-anil-claro);
+    --bs-primary-border-subtle: #c3c9ea;
+    --bs-info-text-emphasis: var(--naicas-anil-escuro);
+    --bs-info-bg-subtle: #eef1fb;
+    --bs-info-border-subtle: #cdd5f2;
+    --bs-success-text-emphasis: #1d4f31;
+    --bs-success-bg-subtle: #e4f1e8;
+    --bs-success-border-subtle: #b9dcc5;
+    --bs-danger-text-emphasis: #7d2a10;
+    --bs-danger-bg-subtle: #fbe9e3;
+    --bs-danger-border-subtle: #f0c3b4;
+    --bs-warning-text-emphasis: #6b4f00;
+    --bs-warning-bg-subtle: #fdf3d4;
+    --bs-warning-border-subtle: #f6dd8f;
+
+    /* body-bg fica branco: o Bootstrap usa essa cor em cards, campos e menus.
+       O fundo "papel" vai só no <body>. */
+    --bs-body-bg: #ffffff;
+    --bs-body-color: var(--naicas-grafite);
+    --bs-emphasis-color: var(--naicas-grafite);
+    --bs-secondary-color: rgba(30, 34, 48, 0.68);
+    --bs-border-color: var(--naicas-linha);
+    --bs-link-color: var(--naicas-anil);
+    --bs-link-color-rgb: 43, 58, 140;
+    --bs-link-hover-color: var(--naicas-anil-escuro);
+    --bs-link-hover-color-rgb: 31, 42, 107;
+    --bs-focus-ring-color: rgba(43, 58, 140, 0.3);
+
+    /* Bootstrap: tipografia e formas */
+    --bs-body-font-family: 'Lexend', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --bs-body-font-size: 0.9375rem;
+    --bs-body-line-height: 1.55;
+    --bs-border-radius: 0.5rem;
+    --bs-border-radius-sm: 0.375rem;
+    --bs-border-radius-lg: 0.75rem;
+}
+
+body {
+    background-color: var(--naicas-papel);
+    font-feature-settings: 'tnum' 1; /* números alinhados: CPF, datas, contagens */
+}
+
+h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5 {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--naicas-grafite);
+}
+
+h6.text-uppercase, .h6.text-uppercase {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+}
+
+.text-muted { color: var(--bs-secondary-color) !important; }
+
+/* ---------- Assinatura: fita crepe escrita a caneta ---------- */
+.fita {
+    display: inline-block;
+    position: relative;
+    padding: 0.2rem 1rem 0.05rem;
+    font-family: 'Kalam', 'Comic Sans MS', cursive;
+    font-weight: 700;
+    font-size: 1.15rem;
+    line-height: 1.3;
+    color: var(--naicas-fita-texto);
+    /* textura de papel crepe: vincos verticais finos */
+    background:
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.16) 0 1px, transparent 1px 4px),
+        var(--naicas-fita);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+    transform: rotate(-1.6deg);
+    /* pontas rasgadas */
+    clip-path: polygon(
+        0 10%, 2.5% 0, 97% 5%, 100% 0, 98.5% 28%, 100% 52%, 97.5% 76%, 100% 100%,
+        3% 95%, 0 100%, 2% 72%, 0 48%, 2.5% 24%
+    );
+    white-space: nowrap;
+}
+
+.fita-grande { font-size: 2rem; padding: 0.25rem 1.4rem 0.05rem; }
+
+/* ---------- Barra do topo ---------- */
+.navbar-naicas {
+    background: var(--naicas-anil);
+    box-shadow: inset 0 -3px 0 var(--naicas-anil-escuro);
+}
+.navbar-naicas .navbar-brand { padding-block: 0.25rem; margin-right: 1.5rem; }
+.navbar-naicas .navbar-brand:hover .fita,
+.navbar-naicas .navbar-brand:focus-visible .fita { transform: rotate(0deg); }
+.navbar-naicas {
+    --bs-navbar-color: rgba(255, 255, 255, 0.82);
+    --bs-navbar-hover-color: #ffffff;
+    --bs-navbar-active-color: #ffffff;
+}
+.navbar-naicas .nav-link { font-weight: 500; }
+
+/* Nome do usuário + etiqueta do cargo, empilhados */
+.usuario-nav {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    line-height: 1.15;
+}
+.cargo {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--naicas-grafite);
+}
+.cargo-diretor { background: var(--naicas-cargo-diretor); }
+.cargo-coordenador { background: var(--naicas-cargo-coordenador); }
+.cargo-monitor { background: var(--naicas-cargo-monitor); }
+
+.faixa-foco {
+    background: var(--naicas-anil-claro);
+    border-bottom: 1px solid var(--bs-primary-border-subtle);
+    color: var(--naicas-anil-escuro);
+}
+
+/* ---------- Componentes ---------- */
+.card {
+    --bs-card-border-color: var(--naicas-linha);
+    --bs-card-border-radius: 0.75rem;
+}
+.shadow-sm { box-shadow: 0 1px 2px rgba(30, 34, 48, 0.06), 0 1px 1px rgba(30, 34, 48, 0.04) !important; }
+
+/* Cards de atalho do painel */
+a.card { transition: border-color 0.15s ease, transform 0.15s ease; }
+a.card:hover { border-color: var(--naicas-anil); transform: translateY(-2px); }
+a.card .bi { color: var(--naicas-anil); }
+
+.table { --bs-table-bg: transparent; }
+.table-light { --bs-table-bg: #f7f8fb; --bs-table-color: var(--bs-secondary-color); }
+.table > thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+
+.btn { font-weight: 500; }
+.btn-primary {
+    --bs-btn-bg: var(--naicas-anil);
+    --bs-btn-border-color: var(--naicas-anil);
+    --bs-btn-hover-bg: var(--naicas-anil-escuro);
+    --bs-btn-hover-border-color: var(--naicas-anil-escuro);
+    --bs-btn-active-bg: var(--naicas-anil-escuro);
+    --bs-btn-active-border-color: var(--naicas-anil-escuro);
+    --bs-btn-disabled-bg: var(--naicas-anil);
+    --bs-btn-disabled-border-color: var(--naicas-anil);
+    --bs-btn-focus-shadow-rgb: 43, 58, 140;
+}
+.btn-outline-primary {
+    --bs-btn-color: var(--naicas-anil);
+    --bs-btn-border-color: var(--naicas-anil);
+    --bs-btn-hover-bg: var(--naicas-anil);
+    --bs-btn-hover-border-color: var(--naicas-anil);
+    --bs-btn-active-bg: var(--naicas-anil-escuro);
+    --bs-btn-active-border-color: var(--naicas-anil-escuro);
+    --bs-btn-disabled-color: var(--naicas-anil);
+    --bs-btn-disabled-border-color: var(--naicas-anil);
+    --bs-btn-focus-shadow-rgb: 43, 58, 140;
+}
+.btn-success, .btn-outline-success {
+    --bs-btn-hover-bg: var(--naicas-folha);
+    --bs-btn-hover-border-color: var(--naicas-folha);
+    --bs-btn-active-bg: var(--naicas-folha);
+    --bs-btn-active-border-color: var(--naicas-folha);
+    --bs-btn-focus-shadow-rgb: 46, 122, 76;
+}
+.btn-success { --bs-btn-bg: var(--naicas-folha); --bs-btn-border-color: var(--naicas-folha); --bs-btn-hover-bg: #256340; }
+.btn-outline-success { --bs-btn-color: var(--naicas-folha); --bs-btn-border-color: var(--naicas-folha); }
+.btn-danger, .btn-outline-danger {
+    --bs-btn-hover-bg: var(--naicas-urucum);
+    --bs-btn-hover-border-color: var(--naicas-urucum);
+    --bs-btn-active-bg: var(--naicas-urucum);
+    --bs-btn-active-border-color: var(--naicas-urucum);
+    --bs-btn-focus-shadow-rgb: 200, 71, 31;
+}
+.btn-outline-danger { --bs-btn-color: var(--naicas-urucum); --bs-btn-border-color: var(--naicas-urucum); }
+.btn-outline-warning {
+    --bs-btn-color: #8a6500;
+    --bs-btn-border-color: #d9a304;
+    --bs-btn-hover-color: var(--naicas-grafite);
+    --bs-btn-hover-bg: var(--naicas-ipe);
+    --bs-btn-hover-border-color: var(--naicas-ipe);
+    --bs-btn-active-color: var(--naicas-grafite);
+    --bs-btn-active-bg: var(--naicas-ipe);
+    --bs-btn-active-border-color: var(--naicas-ipe);
+    --bs-btn-focus-shadow-rgb: 242, 183, 5;
+}
+.btn-link { --bs-btn-color: var(--naicas-anil); --bs-btn-hover-color: var(--naicas-anil-escuro); }
+
+.dropdown-menu {
+    --bs-dropdown-link-active-bg: var(--naicas-anil);
+    --bs-dropdown-border-color: var(--naicas-linha);
+    --bs-dropdown-border-radius: 0.6rem;
+    box-shadow: 0 8px 24px rgba(30, 34, 48, 0.12);
+}
+.pagination {
+    --bs-pagination-color: var(--naicas-anil);
+    --bs-pagination-active-bg: var(--naicas-anil);
+    --bs-pagination-active-border-color: var(--naicas-anil);
+}
+.list-group { --bs-list-group-active-bg: var(--naicas-anil); --bs-list-group-active-border-color: var(--naicas-anil); }
+
+.text-bg-warning { color: var(--naicas-grafite) !important; }
+
+/* Formulários */
+.form-control:focus, .form-select:focus {
+    border-color: #8d98d4;
+    box-shadow: 0 0 0 0.25rem rgba(43, 58, 140, 0.18);
+}
+.form-check-input:checked { background-color: var(--naicas-anil); border-color: var(--naicas-anil); }
+.form-check-input:focus { border-color: #8d98d4; box-shadow: 0 0 0 0.25rem rgba(43, 58, 140, 0.18); }
+.form-label { font-weight: 500; }
+
+/* Foco de teclado sempre visível (no fundo anil vira amarelo ipê) */
+:focus-visible { outline: 3px solid rgba(43, 58, 140, 0.55); outline-offset: 2px; }
+.navbar-naicas :focus-visible { outline-color: var(--naicas-ipe); }
+
+/* ---------- Chamada: P / F / J com as cores do material ---------- */
+.grupo-presenca { width: 100%; }
+.grupo-presenca .btn { flex: 1 1 0; padding-block: 0.55rem; font-weight: 600; }
+@media (min-width: 576px) {
+    .grupo-presenca { width: auto; }
+    .grupo-presenca .btn { flex: 0 0 auto; min-width: 3.25rem; padding-block: 0.375rem; }
+}
+
+/* ---------- Login ---------- */
+.login-cabecalho { text-align: center; margin: 2.5rem 0 1.5rem; }
+.login-cabecalho p { margin-top: 0.9rem; color: var(--bs-secondary-color); }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+    a.card:hover { transform: none; }
+}

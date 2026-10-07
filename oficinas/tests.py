@@ -238,3 +238,15 @@ class OficinaFormTests(BaseOficinasTestCase):
         tipo_a2 = TipoOficina.objects.create(escola=self.escola_a, nome='Teatro')
         form = OficinaForm(instance=self.oficina_a, user=self.diretor)
         self.assertEqual(set(form.fields['tipo_oficina'].queryset), {self.tipo_a, tipo_a2})
+
+
+class NavegacaoTiposTests(BaseOficinasTestCase):
+    def test_tipos_de_oficina_saiu_de_configuracoes_e_virou_botao(self):
+        self.client.force_login(self.coord_a)
+        lista = self.client.get(reverse('oficinas:lista'))
+        self.assertContains(lista, f'href="{reverse("oficinas:tipos")}" class="btn')
+        self.assertNotContains(lista, '>Configurações<')  # Coordenador não tem mais o menu
+        self.client.force_login(self.diretor)
+        home = self.client.get(reverse('core:home'))
+        self.assertContains(home, '>Configurações<')
+        self.assertNotContains(home, f'class="dropdown-item" href="{reverse("oficinas:tipos")}"')

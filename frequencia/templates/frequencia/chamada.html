@@ -26,17 +26,20 @@
         {% for linha in linhas %}
             {% with m=linha.matricula atual=linha.chamada.status_presenca|default:'P' %}
             <li class="list-group-item py-3">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
                     <span class="fw-semibold">{{ m.aluno.nome }}</span>
-                    <div class="btn-group" role="group" aria-label="Presença de {{ m.aluno.nome }}">
+                    <div class="btn-group grupo-presenca" role="group" aria-label="Presença de {{ m.aluno.nome }}">
                         {% for valor, rotulo in presencas %}
                             <input type="radio" class="btn-check" name="presenca_{{ m.pk }}" id="p_{{ m.pk }}_{{ valor }}" value="{{ valor }}" autocomplete="off" {% if atual == valor %}checked{% endif %}>
                             <label class="btn {% if valor == 'P' %}btn-outline-success{% elif valor == 'F' %}btn-outline-danger{% else %}btn-outline-warning{% endif %} px-3" for="p_{{ m.pk }}_{{ valor }}" title="{{ rotulo }}">{{ valor }}</label>
                         {% endfor %}
                     </div>
                 </div>
-                <input type="text" name="obs_{{ m.pk }}" value="{{ linha.chamada.observacoes|default:'' }}" maxlength="255"
-                       class="form-control form-control-sm mt-2" placeholder="Observação (ex.: motivo da falta justificada)">
+                {# Observação aparece ao marcar F ou J (ou se já houver texto salvo). #}
+                <div {% if not linha.chamada.observacoes %}data-mostrar-se="presenca_{{ m.pk }}=F|J"{% endif %}>
+                    <input type="text" name="obs_{{ m.pk }}" value="{{ linha.chamada.observacoes|default:'' }}" maxlength="255"
+                           class="form-control form-control-sm mt-2" placeholder="Observação (ex.: motivo da falta)" aria-label="Observação sobre {{ m.aluno.nome }}">
+                </div>
             </li>
             {% endwith %}
         {% endfor %}
@@ -59,12 +62,14 @@
 {% endblock %}
 
 {% block extra_js %}
+{% include "core/_condicionais_js.html" %}
 <script>
     (function () {
         const botao = document.getElementById('todos_presentes');
         if (!botao) return;
         botao.addEventListener('click', function () {
             document.querySelectorAll('#form_chamada input.btn-check[value="P"]').forEach(function (r) { r.checked = true; });
+            document.getElementById('form_chamada').dispatchEvent(new Event('change', {bubbles: true}));
         });
     })();
 </script>

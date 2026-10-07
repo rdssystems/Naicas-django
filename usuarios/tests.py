@@ -291,3 +291,25 @@ class UsuarioFormTests(BaseAcessoTestCase):
         self.client.post(url)
         self.monitor.refresh_from_db()
         self.assertTrue(self.monitor.is_active)
+
+
+class CargoNaBarraTests(BaseAcessoTestCase):
+    def test_etiqueta_do_cargo_com_a_cor_de_cada_papel(self):
+        casos = [
+            (self.diretor, 'cargo-diretor', 'Diretor'),
+            (self.superuser, 'cargo-diretor', 'Diretor'),  # superuser sem Profile = Diretor
+            (self.coord_a, 'cargo-coordenador', 'Coordenador'),
+            (self.monitor, 'cargo-monitor', 'Monitor'),
+        ]
+        for user, classe, rotulo in casos:
+            self.client.force_login(user)
+            response = self.client.get(reverse('core:home'))
+            self.assertContains(response, f'<span class="cargo {classe}">{rotulo}</span>', html=False)
+            outras = {'cargo-diretor', 'cargo-coordenador', 'cargo-monitor'} - {classe}
+            for outra in outras:
+                self.assertNotContains(response, outra)
+
+
+class LoginTextoTests(TestCase):
+    def test_frase_da_secretaria(self):
+        self.assertContains(self.client.get(reverse('usuarios:login')), 'Secretaria de Desenvolvimento Social')

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <title>Naicas</title>
-  <rect width="64" height="64" rx="14" fill="#0d6efd"/>
+  <rect width="64" height="64" rx="14" fill="#2b3a8c"/>
   <!-- base do capelo -->
   <path d="M17 31 L32 38 L47 31 L47 42 Q32 51 17 42 Z" fill="#ffffff" fill-opacity="0.85"/>
   <!-- topo do capelo -->

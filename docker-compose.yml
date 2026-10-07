@@ -28,8 +28,10 @@ services:
       - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+    # Padrão: só esta máquina (127.0.0.1). Para outros aparelhos da rede
+    # (ou o Tailscale) acessarem, defina WEB_BIND=0.0.0.0 no .env.
     ports:
-      - "${WEB_PORT:-8020}:8000"
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8020}:8000"
     env_file:
       - .env
     environment:

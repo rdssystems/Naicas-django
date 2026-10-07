@@ -73,7 +73,7 @@ class FocoNaUnidadeTests(TestCase):
         from oficinas.tests import criar_oficina
         from alunos.tests import criar_aluno
 
-        cls.canaa = EscolaNaica.objects.create(nome='Naica Canaã')
+        cls.canaa = EscolaNaica.objects.create(nome='Naica Teste')
         cls.norte = EscolaNaica.objects.create(nome='Naica Norte')
         cls.diretor = criar_usuario('diretor', NivelAcesso.DIRETOR)
         cls.coord = criar_usuario('coord', NivelAcesso.COORDENADOR, cls.canaa)
@@ -94,14 +94,14 @@ class FocoNaUnidadeTests(TestCase):
         self.client.force_login(self.diretor)
         self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança', 'Violão'})
         self.assertEqual(self.nomes(reverse('alunos:lista'), 'alunos'), {'Ana', 'Bruno'})
-        self.assertContains(self.client.get(reverse('core:home')), '<i class="bi bi-mortarboard"></i> Naicas')
+        self.assertContains(self.client.get(reverse('core:home')), '<span class="fita">Naicas</span>')
 
     def test_dentro_da_unidade_filtra_e_mostra_o_nome_na_barra(self):
         self.assertRedirects(self.entrar(self.canaa), reverse('core:home'))
         self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança'})
         self.assertEqual(self.nomes(reverse('alunos:lista'), 'alunos'), {'Ana'})
         response = self.client.get(reverse('core:home'))
-        self.assertContains(response, '<i class="bi bi-mortarboard"></i> Naica Canaã')
+        self.assertContains(response, '<span class="fita">Naica Teste</span>')
         self.assertContains(response, 'Você está dentro da unidade')
 
     def test_continua_diretor_dentro_da_unidade(self):
@@ -130,7 +130,7 @@ class FocoNaUnidadeTests(TestCase):
         sessao[CHAVE_SESSAO] = self.norte.pk
         sessao.save()
         self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança'})
-        self.assertContains(self.client.get(reverse('core:home')), '<i class="bi bi-mortarboard"></i> Naica Canaã')
+        self.assertContains(self.client.get(reverse('core:home')), '<span class="fita">Naica Teste</span>')
 
     def test_unidade_inexistente_ou_invalida(self):
         self.client.force_login(self.diretor)
@@ -158,3 +158,13 @@ class FocoNaUnidadeTests(TestCase):
             response = self.client.get(reverse('core:home'))
             self.assertNotIn('unidades_para_foco', response.context)
             self.assertNotContains(response, 'Visão geral da rede')
+
+
+class UnidadesUberlandiaTests(TestCase):
+    def test_migracao_cria_as_10_unidades(self):
+        unidades = EscolaNaica.objects.filter(email__endswith='@uberlandia.mg.gov.br')
+        self.assertEqual(unidades.count(), 10)
+        tibery = unidades.get(nome='Naica Tibery')
+        self.assertEqual(tibery.telefone, '(34) 3213-5998')
+        self.assertEqual(tibery.slug, 'naica-tibery')
+        self.assertIn('Avenida Europa, 175', tibery.endereco)

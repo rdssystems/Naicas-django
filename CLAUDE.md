@@ -17,6 +17,7 @@ App Django multi-unidade para a rede de escolas Naica: oficinas, cadastro de alu
 - Escopo por unidade é aplicado no queryset/na view (mixins do `core`), nunca só escondido no template. O mesmo vale para os dados de saúde (LGPD).
 - Templates em `<app>/templates/<app>/`, sempre estendendo `core/base.html` (Bootstrap 5.3 + bootstrap-icons).
 - Textos de interface, nomes de models e campos em português.
+- **Identidade visual** em `core/static/core/naicas.css` ("material de escola"): tokens anil `#2b3a8c`, urucum `#c8471f`, ipê `#f2b705`, folha `#2e7a4c`, papel `#f3f4f8`, grafite `#1e2230`; fonte Lexend no app todo. A **fita crepe** (`.fita`, fonte Kalam) é a assinatura e só marca "onde você está" (unidade na barra, login): não espalhar. Cargos na barra (`.cargo-diretor` ipê, `.cargo-coordenador` `#9ad7b0`, `.cargo-monitor` `#f6b195`): usar as mesmas cores sempre que o cargo aparecer. Use as classes do Bootstrap normalmente; as cores já vêm sobrescritas pelas variáveis.
 
 ## Rodando local
 
@@ -31,7 +32,8 @@ docker compose exec web python manage.py popular_anexos --ficticios   # PDFs fic
 
 - Portas: web `8020`, Postgres `127.0.0.1:5436` (8000/5434 são do Gestão Qualificação).
 - `.env` (não versionado) vem do `.env.example`. Com `DEBUG=True` o container usa `runserver`; com `DEBUG=False`, Gunicorn.
-- Alterou `settings.py` ou `.env`? Reinicie o container (`docker compose restart web`).
+- Alterou `settings.py`? `docker compose restart web`. Alterou o `.env`? `docker compose up -d --force-recreate web` (o `restart` não relê o `.env`).
+- **Acesso por outros aparelhos (celular na mesma rede / Tailscale):** `WEB_BIND=0.0.0.0` no `.env` e o IP da máquina em `ALLOWED_HOSTS` e `CSRF_TRUSTED_ORIGINS` (com `http://` e a porta). Se o IP do Wi-Fi mudar, atualize os dois e recrie o container. O padrão (`127.0.0.1`) só aceita a própria máquina: é o que deve ficar na VPS.
 
 ## Deploy
 

@@ -3,10 +3,11 @@
 {% block title %}Tipos de oficina{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<a href="{% url 'oficinas:lista' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Oficinas</a>
+<div class="d-flex justify-content-between align-items-center mt-2 mb-3">
     <div>
         <h1 class="h4 mb-0">Tipos de oficina</h1>
-        {% if is_coordenador %}<div class="small text-muted">{{ active_escola }}</div>{% endif %}
+        {% if active_escola %}<div class="small text-muted">{{ active_escola }}</div>{% endif %}
     </div>
     <a href="{% url 'oficinas:tipo_criar' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Novo tipo</a>
 </div>
