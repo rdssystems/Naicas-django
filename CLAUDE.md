@@ -2,16 +2,16 @@
 
 App Django multi-unidade para a rede de escolas Naica: oficinas, cadastro de alunos em 6 etapas, matrícula e ficha de frequência, com 3 níveis de acesso (Diretor / Coordenador / Monitor).
 
-**Fonte de verdade da especificação:** [naicas_prompt_espinha_dorsal.md](naicas_prompt_espinha_dorsal.md). Leia antes de implementar qualquer coisa.
+As regras e decisões do projeto ficam neste arquivo. Leia antes de implementar qualquer coisa.
 
 ## Regras obrigatórias
 
-- **Toda funcionalidade é um app Django próprio** (seção 2.1 do spec). `naicas/` só tem settings/urls/wsgi/asgi. Funcionalidade que não cabe em app existente → app novo, registrado em `LOCAL_APPS` e incluído em `naicas/urls.py` com namespace.
-- **Spec driven development:** se faltar informação para implementar (campo, regra, permissão, fluxo), perguntar ao usuário antes de codar e registrar a decisão no spec (seção 2.2 ou checklist da seção 6).
+- **Toda funcionalidade é um app Django próprio.** `naicas/` só tem settings/urls/wsgi/asgi. Funcionalidade que não cabe em app existente → app novo, registrado em `LOCAL_APPS` e incluído em `naicas/urls.py` com namespace.
+- **Spec driven development:** se faltar informação para implementar (campo, regra, permissão, fluxo), perguntar ao usuário antes de codar e registrar a decisão aqui no CLAUDE.md.
 - **Regra de ouro de escopo:** `Profile.escola` setada sempre vence `nivel_acesso` ao decidir a unidade ativa.
 - **`escola = None` NÃO é Diretor:** Monitores são globais (também sem escola) e escopados pelas oficinas designadas (`Oficina.monitores`). Acesso de rede só com `nivel_acesso == 'DIRETOR'` ou superuser.
 - Só o Diretor gerencia contas de usuário.
-- **Escala:** monitor ↔ oficina é `oficinas.Designacao` (dias vazio = todos os dias da oficina); as telas ficam no app `escalas`. Choque de horário (matrícula e escala) é sempre `oficinas/horarios.py`.
+- **Escala:** monitor ↔ oficina é `oficinas.Designacao` (dias vazio = todos os dias da oficina); as telas ficam no app `escalas` (agenda semanal padrão, aba por monitor, editor por monitor, "Minha semana"). Diretor (rede ou unidade em foco) e Coordenador (só a própria unidade) montam a escala; choque de horário é recusado mesmo entre unidades. A escala só orienta: o monitor designado lança chamada na oficina em qualquer dia. Choque de horário (matrícula e escala) é sempre `oficinas/horarios.py`.
 - Diretor/admin pode "entrar" numa unidade (`escolas/foco.py`, sessão): filtros usam `acesso.filtrar_por_escola`/`visiveis_para`, que já respeitam o foco. Use sempre essas funções; nunca filtre por `Profile.escola` direto.
 - **Dependência entre apps numa direção só:** `alunos` não importa `anexos`/`matriculas`; esses apps registram a sua etapa do cadastro em `alunos/etapas.py` no `ready()`.
 - `/media/` nunca é servido diretamente: anexos (PII) só saem pela view `anexos:arquivo`.
