@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class EscalasConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'escalas'
+    verbose_name = 'Escala dos monitores'

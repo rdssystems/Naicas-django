@@ -127,9 +127,9 @@ class EdicaoPermissaoTests(BaseOficinasTestCase):
             for url in urls:
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 200, (user, url))
-        # Checkboxes de dias e monitores com a classe do Bootstrap.
+        # Checkboxes dos dias com a classe do Bootstrap.
         response = self.client.get(reverse('oficinas:criar'))
-        self.assertContains(response, 'class="form-check-input"', count=7 + 2)  # 7 dias + 2 monitores
+        self.assertContains(response, 'class="form-check-input"', count=7)  # 7 dias (monitores agora na escala)
 
 
     def test_monitor_nao_cria_nem_edita(self):
@@ -195,7 +195,7 @@ class OficinaFormTests(BaseOficinasTestCase):
             'tipo_oficina': self.tipo_a.pk, 'nome': 'Nova', 'carga_horaria': 30, 'vagas': 15,
             'data_inicio': '2026-03-01', 'data_fim': '2026-07-01', 'dias_semana': ['1', '3'],
             'turno': Oficina.Turno.TARDE, 'horario': '14:00', 'horario_fim': '16:00',
-            'status': Oficina.Status.ABERTA, 'monitores': [],
+            'status': Oficina.Status.ABERTA,
             'nome_monitor': '', 'telefone_monitor': '',
         }
         base.update(kwargs)
@@ -210,29 +210,13 @@ class OficinaFormTests(BaseOficinasTestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('tipo_oficina', form.errors)
 
-    def test_coordenador_designa_monitor_global(self):
+    def test_coordenador_cria_oficina_sem_campo_de_monitores(self):
+        self.assertNotIn('monitores', OficinaForm(user=self.coord_a).fields)
         self.client.force_login(self.coord_a)
-        response = self.client.post(
-            reverse('oficinas:criar'), self.dados(monitores=[self.outro_monitor.pk])
-        )
+        response = self.client.post(reverse('oficinas:criar'), self.dados())
         oficina = Oficina.objects.get(nome='Nova')
         self.assertRedirects(response, reverse('oficinas:detalhe', args=[oficina.pk]))
-        self.assertEqual(oficina.escola, self.escola_a)
-        self.assertEqual(oficina.dias_semana, [1, 3])
-        self.assertEqual(list(oficina.monitores.all()), [self.outro_monitor])
-
-    def test_so_monitores_podem_ser_designados(self):
-        form = OficinaForm(data=self.dados(monitores=[self.coord_a.pk]), user=self.coord_a)
-        self.assertFalse(form.is_valid())
-        self.assertIn('monitores', form.errors)
-
-    def test_monitor_inativo_some_da_lista_mas_designado_continua(self):
-        self.monitor.is_active = False
-        self.monitor.save()
-        nova = OficinaForm(user=self.coord_a)
-        self.assertNotIn(self.monitor, nova.fields['monitores'].queryset)
-        edicao = OficinaForm(instance=self.oficina_a, user=self.coord_a)
-        self.assertIn(self.monitor, edicao.fields['monitores'].queryset)
+        self.assertEqual((oficina.escola, oficina.dias_semana), (self.escola_a, [1, 3]))
 
     def test_edicao_nao_troca_unidade(self):
         tipo_a2 = TipoOficina.objects.create(escola=self.escola_a, nome='Teatro')
@@ -250,3 +234,23 @@ class NavegacaoTiposTests(BaseOficinasTestCase):
         home = self.client.get(reverse('core:home'))
         self.assertContains(home, '>Configurações<')
         self.assertNotContains(home, f'class="dropdown-item" href="{reverse("oficinas:tipos")}"')
+
+
+class DesignacaoDiasTests(BaseOficinasTestCase):
+    def test_oficina_que_perde_dia_ajusta_as_designacoes(self):
+        from .models import Designacao
+        # oficina_a: seg/qua. monitor só na quarta; outro_monitor em todos os dias (vazio).
+        Designacao.objects.filter(oficina=self.oficina_a, monitor=self.monitor).update(dias_semana=[2])
+        Designacao.objects.create(oficina=self.oficina_a, monitor=self.outro_monitor)
+        self.oficina_a.dias_semana = [0]  # deixou de ter quarta
+        self.oficina_a.save()
+        self.assertFalse(Designacao.objects.filter(oficina=self.oficina_a, monitor=self.monitor).exists())
+        restante = Designacao.objects.get(oficina=self.oficina_a, monitor=self.outro_monitor)
+        self.assertEqual((restante.dias_semana, restante.dias_efetivos), ([], [0]))
+
+    def test_detalhe_mostra_dias_da_escala(self):
+        from .models import Designacao
+        Designacao.objects.filter(oficina=self.oficina_a, monitor=self.monitor).update(dias_semana=[2])
+        self.client.force_login(self.coord_a)
+        response = self.client.get(reverse('oficinas:detalhe', args=[self.oficina_a.pk]))
+        self.assertContains(response, '· Qua')

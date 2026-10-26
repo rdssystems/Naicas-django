@@ -11,6 +11,7 @@ App Django multi-unidade para a rede de escolas Naica: oficinas, cadastro de alu
 - **Regra de ouro de escopo:** `Profile.escola` setada sempre vence `nivel_acesso` ao decidir a unidade ativa.
 - **`escola = None` NÃO é Diretor:** Monitores são globais (também sem escola) e escopados pelas oficinas designadas (`Oficina.monitores`). Acesso de rede só com `nivel_acesso == 'DIRETOR'` ou superuser.
 - Só o Diretor gerencia contas de usuário.
+- **Escala:** monitor ↔ oficina é `oficinas.Designacao` (dias vazio = todos os dias da oficina); as telas ficam no app `escalas`. Choque de horário (matrícula e escala) é sempre `oficinas/horarios.py`.
 - Diretor/admin pode "entrar" numa unidade (`escolas/foco.py`, sessão): filtros usam `acesso.filtrar_por_escola`/`visiveis_para`, que já respeitam o foco. Use sempre essas funções; nunca filtre por `Profile.escola` direto.
 - **Dependência entre apps numa direção só:** `alunos` não importa `anexos`/`matriculas`; esses apps registram a sua etapa do cadastro em `alunos/etapas.py` no `ready()`.
 - `/media/` nunca é servido diretamente: anexos (PII) só saem pela view `anexos:arquivo`.

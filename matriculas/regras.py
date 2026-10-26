@@ -8,6 +8,7 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from core import acesso
+from oficinas.horarios import horarios_se_chocam
 from oficinas.models import Oficina
 
 from .models import Matricula
@@ -27,15 +28,6 @@ def com_vagas_ocupadas(queryset):
 
 def vagas_ocupadas(oficina):
     return oficina.matriculas.filter(status=Matricula.Status.CURSANDO).count()
-
-
-def horarios_se_chocam(a, b):
-    """Dia da semana em comum + horários sobrepostos + períodos que se cruzam."""
-    return (
-        bool(set(a.dias_semana) & set(b.dias_semana))
-        and a.horario < b.horario_fim and b.horario < a.horario_fim
-        and a.data_inicio <= b.data_fim and b.data_inicio <= a.data_fim
-    )
 
 
 def conflitos_de_horario(aluno, oficina):

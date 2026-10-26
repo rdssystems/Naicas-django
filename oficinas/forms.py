@@ -1,9 +1,6 @@
 from django import forms
-from django.contrib.auth.models import User
-from django.db.models import Q
 
 from core import acesso
-from core.acesso import NivelAcesso
 from escolas.models import EscolaNaica
 
 from .models import Oficina, TipoOficina
@@ -63,14 +60,13 @@ class OficinaForm(forms.ModelForm):
         fields = [
             'tipo_oficina', 'nome', 'carga_horaria', 'vagas',
             'data_inicio', 'data_fim', 'dias_semana', 'turno', 'horario', 'horario_fim',
-            'status', 'monitores', 'nome_monitor', 'telefone_monitor',
+            'status', 'nome_monitor', 'telefone_monitor',
         ]
         widgets = {
             'data_inicio': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'data_fim': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'horario': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
             'horario_fim': forms.TimeInput(attrs={'type': 'time'}, format='%H:%M'),
-            'monitores': forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, user, **kwargs):
@@ -85,17 +81,4 @@ class OficinaForm(forms.ModelForm):
         if acesso.is_diretor(user) and not self.instance.pk:
             campo_tipo.label_from_instance = lambda t: f'{t.escola.nome} · {t.nome}'
             campo_tipo.help_text = 'A unidade da oficina é a unidade do tipo escolhido.'
-
-        # Monitores são globais: qualquer Monitor ativo pode ser designado.
-        # Os já designados continuam na lista mesmo se forem desativados depois.
-        filtro_monitores = Q(is_active=True)
-        if self.instance.pk:
-            filtro_monitores |= Q(pk__in=list(self.instance.monitores.values_list('pk', flat=True)))
-        campo_monitores = self.fields['monitores']
-        campo_monitores.queryset = (
-            User.objects.filter(profile__nivel_acesso=NivelAcesso.MONITOR)
-            .filter(filtro_monitores)
-            .order_by('first_name', 'username')
-        )
-        campo_monitores.label_from_instance = lambda u: u.get_full_name() or u.username
-        campo_monitores.help_text = 'Monitores da rede que lançam a frequência desta oficina.'
+        # Monitores designados: definidos na escala (app escalas), não aqui.

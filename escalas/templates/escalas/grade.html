@@ -1,0 +1,39 @@
+{% extends "core/base.html" %}
+
+{% block title %}Escala{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="h4 mb-0">Escala dos monitores</h1>
+        <div class="small text-muted">{% if active_escola %}{{ active_escola }}{% else %}Rede inteira{% endif %} · oficinas abertas e em andamento</div>
+    </div>
+    <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-calendar-plus"></i> Montar escala de…
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" style="max-height: 60vh; overflow-y: auto;">
+            {% for monitor in monitores %}
+                <li><a class="dropdown-item" href="{% url 'escalas:monitor' monitor.pk %}">{{ monitor.get_full_name|default:monitor.username }}</a></li>
+            {% empty %}
+                <li><span class="dropdown-item-text small text-muted">Nenhum monitor ativo cadastrado.</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link{% if vista == 'agenda' %} active{% endif %}" href="?"{% if vista == 'agenda' %} aria-current="page"{% endif %}><i class="bi bi-calendar3-week"></i> Agenda</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link{% if vista == 'monitores' %} active{% endif %}" href="?vista=monitores"{% if vista == 'monitores' %} aria-current="page"{% endif %}><i class="bi bi-people"></i> Por monitor</a>
+    </li>
+</ul>
+
+{% if vista == 'agenda' %}
+    {% include "escalas/_agenda.html" %}
+{% else %}
+    {% include "escalas/_por_monitor.html" %}
+{% endif %}
+{% endblock %}

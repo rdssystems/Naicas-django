@@ -86,7 +86,7 @@ class OficinaListView(PerfilRequiredMixin, ListView):
     def get_queryset(self):
         qs = acesso.filtrar_oficinas_visiveis(
             self.request.user,
-            Oficina.objects.select_related('escola', 'tipo_oficina').prefetch_related('monitores'),
+            Oficina.objects.select_related('escola', 'tipo_oficina'),
         )
         params = self.request.GET
         status = params.get('status', '')
@@ -132,7 +132,9 @@ class OficinaDetailView(MonitorRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         context['pode_editar'] = acesso.pode_gerenciar_escola(user, self.oficina.escola_id)
-        context['monitores'] = self.oficina.monitores.order_by('first_name', 'username')
+        context['designacoes'] = self.oficina.designacoes.select_related('monitor').order_by(
+            'monitor__first_name', 'monitor__username'
+        )
         return context
 
 

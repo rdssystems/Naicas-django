@@ -12,6 +12,7 @@ urlpatterns = [
     path('anexos/', include('anexos.urls')),
     path('matriculas/', include('matriculas.urls')),
     path('frequencia/', include('frequencia.urls')),
+    path('escalas/', include('escalas.urls')),
     path('', include('core.urls')),
 ]
 

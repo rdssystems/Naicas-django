@@ -84,12 +84,13 @@ class Oficina(models.Model):
         help_text='Quem conduz a oficina sem ter conta no sistema.',
     )
     telefone_monitor = models.CharField('telefone do monitor', max_length=20, blank=True)
+    # Escala: quem atende a oficina e em quais dias (ver Designacao).
     monitores = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         verbose_name='monitores designados',
         blank=True,
+        through='Designacao',
         related_name='oficinas_designadas',
-        limit_choices_to={'profile__nivel_acesso': NivelAcesso.MONITOR},
     )
 
     class Meta:
@@ -114,8 +115,63 @@ class Oficina(models.Model):
     def save(self, *args, **kwargs):
         self.escola_id = self.tipo_oficina.escola_id
         super().save(*args, **kwargs)
+        self.ajustar_designacoes_aos_dias()
+
+    def ajustar_designacoes_aos_dias(self):
+        """
+        Se a oficina perdeu dias, eles saem das designações. Designação que
+        fica sem nenhum dia é removida (dias vazio significaria "todos").
+        """
+        for designacao in self.designacoes.exclude(dias_semana=[]):
+            restantes = [d for d in designacao.dias_semana if d in self.dias_semana]
+            if not restantes:
+                designacao.delete()
+            elif restantes != designacao.dias_semana:
+                designacao.dias_semana = restantes
+                designacao.save(update_fields=['dias_semana'])
 
     @property
     def dias_semana_display(self):
         nomes = dict(self.DiaSemana.choices)
         return ', '.join(nomes[d][:3] for d in sorted(self.dias_semana or []))
+
+
+class Designacao(models.Model):
+    """
+    Escala: o monitor atende a oficina nos dias indicados.
+    `dias_semana` vazio = todos os dias da oficina (acompanha mudanças nela).
+    """
+
+    oficina = models.ForeignKey(Oficina, on_delete=models.CASCADE, related_name='designacoes')
+    monitor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='designacoes',
+        limit_choices_to={'profile__nivel_acesso': NivelAcesso.MONITOR},
+    )
+    dias_semana = ArrayField(
+        models.PositiveSmallIntegerField(choices=Oficina.DiaSemana.choices),
+        verbose_name='dias que atende', default=list, blank=True,
+        help_text='Vazio = todos os dias da oficina.',
+    )
+
+    class Meta:
+        verbose_name = 'designação de monitor'
+        verbose_name_plural = 'designações de monitores'
+        constraints = [
+            models.UniqueConstraint(fields=['oficina', 'monitor'], name='designacao_unica_por_oficina'),
+        ]
+
+    def __str__(self):
+        return f'{self.monitor} em {self.oficina}'
+
+    @property
+    def dias_efetivos(self):
+        return sorted(self.dias_semana) if self.dias_semana else sorted(self.oficina.dias_semana)
+
+    @property
+    def dias_display(self):
+        nomes = dict(Oficina.DiaSemana.choices)
+        return ', '.join(nomes[d][:3] for d in self.dias_efetivos)
+
+    @property
+    def todos_os_dias(self):
+        return not self.dias_semana

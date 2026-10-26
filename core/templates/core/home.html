@@ -12,6 +12,28 @@
 </p>
 
 <div class="row g-3">
+    {% if is_monitor %}
+    <div class="col-sm-6 col-lg-4">
+        <a href="{% url 'escalas:minha_semana' %}" class="card h-100 text-decoration-none shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-calendar-week fs-3 text-primary"></i>
+                <h2 class="h6 mt-2 mb-1">Minha semana</h2>
+                <p class="small text-muted mb-0">Suas oficinas por dia e a chamada de hoje.</p>
+            </div>
+        </a>
+    </div>
+    {% endif %}
+    {% if is_diretor or is_coordenador %}
+    <div class="col-sm-6 col-lg-4">
+        <a href="{% url 'escalas:grade' %}" class="card h-100 text-decoration-none shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-calendar-week fs-3 text-primary"></i>
+                <h2 class="h6 mt-2 mb-1">Escala</h2>
+                <p class="small text-muted mb-0">Quais monitores atendem cada oficina, por dia.</p>
+            </div>
+        </a>
+    </div>
+    {% endif %}
     {% if is_diretor %}
     <div class="col-sm-6 col-lg-4">
         <a href="{% url 'escolas:lista' %}" class="card h-100 text-decoration-none shadow-sm">

@@ -1,0 +1,67 @@
+{% load l10n %}
+{% comment %}
+Aba "Agenda": semana padrão, dias em colunas e horas descendo. Precisa de:
+agenda (colunas, horas, total_horas), monitores, monitor_filtro, hoje.
+Posições vêm prontas do servidor (escalas.regras.agenda_semanal) em %; usar
+`unlocalize` para não sair "12,5%" (vírgula) no CSS.
+{% endcomment %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <form method="get" class="d-flex align-items-center gap-2 mb-0">
+        <label for="filtro_monitor" class="small text-muted text-nowrap">Monitor</label>
+        <select name="monitor" id="filtro_monitor" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Todos os monitores</option>
+            {% for m in monitores %}
+                <option value="{{ m.pk }}" {% if monitor_filtro.pk == m.pk %}selected{% endif %}>{{ m.get_full_name|default:m.username }}</option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filtrar</button></noscript>
+    </form>
+    {% if not monitor_filtro %}
+    <div class="small text-muted d-flex align-items-center gap-2">
+        <span class="agenda-legenda agenda-legenda-sem"></span> Oficina sem monitor escalado no dia
+    </div>
+    {% else %}
+    <a href="{% url 'escalas:monitor' monitor_filtro.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Editar escala de {{ monitor_filtro.first_name|default:monitor_filtro.username }}</a>
+    {% endif %}
+</div>
+
+{% if agenda.vazia %}
+<div class="alert alert-light border small">
+    {% if monitor_filtro %}{{ monitor_filtro.get_full_name|default:monitor_filtro.username }} ainda não tem oficinas na escala{% if active_escola %} desta unidade{% endif %}.
+    {% else %}Nenhuma oficina aberta ou em andamento{% if active_escola %} nesta unidade{% endif %}.{% endif %}
+</div>
+{% endif %}
+{% with colunas=agenda.colunas %}
+<div class="agenda-rolagem card shadow-sm">
+    <div class="agenda" style="--agenda-dias: {{ colunas|length }}; --agenda-horas: {{ agenda.total_horas }};">
+        <div class="agenda-canto"></div>
+        {% for coluna in colunas %}
+            <div class="agenda-titulo{% if coluna.dia == hoje %} agenda-titulo-hoje{% endif %}">{{ coluna.nome }}{% if coluna.dia == hoje %} <span class="small">· hoje</span>{% endif %}</div>
+        {% endfor %}
+
+        <div class="agenda-horas" aria-hidden="true">
+            {% for hora in agenda.horas %}
+                <span style="top: calc(100% * {{ forloop.counter0 }} / {{ agenda.total_horas }});">{{ hora|stringformat:"02d" }}:00</span>
+            {% endfor %}
+        </div>
+        {% for coluna in colunas %}
+            <div class="agenda-dia{% if coluna.dia == hoje %} agenda-dia-hoje{% endif %}">
+                {% for b in coluna.blocos %}
+                {% with o=b.oficina %}
+                <a href="{% url 'oficinas:detalhe' o.pk %}"
+                   class="agenda-bloco{% if b.sem_monitor %} agenda-bloco-sem{% endif %}"
+                   style="top: {{ b.top|unlocalize }}%; height: {{ b.altura|unlocalize }}%; left: {{ b.esquerda|unlocalize }}%; width: {{ b.largura|unlocalize }}%;"
+                   title="{{ o.nome }} · {{ o.escola.nome }} · {{ o.horario|time:'H:i' }}–{{ o.horario_fim|time:'H:i' }}">
+                    <span class="agenda-bloco-nome">{{ o.nome }}</span>
+                    <span class="agenda-bloco-info">{{ o.horario|time:"H:i" }}–{{ o.horario_fim|time:"H:i" }}{% if not active_escola %} · {{ o.escola.nome }}{% endif %}</span>
+                    <span class="agenda-bloco-monitores">
+                        {% for m in b.monitores %}<span>{{ m.first_name|default:m.username }}</span>{% empty %}<em>sem monitor</em>{% endfor %}
+                    </span>
+                </a>
+                {% endwith %}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endwith %}

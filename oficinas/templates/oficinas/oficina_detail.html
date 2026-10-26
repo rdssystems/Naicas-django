@@ -33,12 +33,17 @@
     <div class="col-lg-5">
         <div class="card shadow-sm h-100">
             <div class="card-body">
-                <h2 class="h6 text-uppercase text-muted mb-3">Monitores</h2>
-                {% for monitor in monitores %}
-                    <div class="mb-2"><i class="bi bi-person-badge"></i> {{ monitor.get_full_name|default:monitor.username }}{% if not monitor.is_active %} <span class="badge text-bg-secondary">inativo</span>{% endif %}</div>
+                <h2 class="h6 text-uppercase text-muted mb-3">Monitores (escala)</h2>
+                {% for d in designacoes %}
+                    <div class="mb-2 d-flex justify-content-between align-items-center gap-2">
+                        <span><i class="bi bi-person-badge"></i> {{ d.monitor.get_full_name|default:d.monitor.username }}{% if not d.monitor.is_active %} <span class="badge text-bg-secondary">inativo</span>{% endif %}
+                            <span class="small text-muted">· {% if d.todos_os_dias %}todos os dias{% else %}{{ d.dias_display }}{% endif %}</span></span>
+                        {% if pode_editar and d.monitor.is_active %}<a href="{% url 'escalas:monitor' d.monitor.pk %}" class="small text-decoration-none">escala</a>{% endif %}
+                    </div>
                 {% empty %}
-                    <p class="small text-muted mb-2">Nenhum monitor designado.</p>
+                    <p class="small text-muted mb-2">Nenhum monitor escalado.</p>
                 {% endfor %}
+                {% if pode_editar %}<a href="{% url 'escalas:grade' %}" class="small">Montar escala</a>{% endif %}
                 {% if oficina.nome_monitor %}
                     <hr>
                     <div class="small text-muted">Monitor sem conta no sistema</div>
