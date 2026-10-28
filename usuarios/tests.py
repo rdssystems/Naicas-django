@@ -149,7 +149,7 @@ class LoginTests(BaseAcessoTestCase):
         response = self.client.post(
             reverse('usuarios:login'), {'username': 'coord_a', 'password': SENHA}
         )
-        self.assertRedirects(response, reverse('core:home'))
+        self.assertRedirects(response, reverse('dashboard:inicio'))
 
     def test_home_exige_login(self):
         response = self.client.get(reverse('core:home'))

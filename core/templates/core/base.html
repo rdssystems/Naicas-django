@@ -28,6 +28,9 @@
             </button>
             <div class="collapse navbar-collapse" id="menu">
                 <ul class="navbar-nav me-auto">
+                    {% if is_diretor or is_coordenador %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:inicio' %}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                    {% endif %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'core:home' %}">Início</a></li>
                     {% if is_monitor %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'escalas:minha_semana' %}">Minha semana</a></li>

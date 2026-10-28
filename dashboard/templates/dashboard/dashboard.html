@@ -1,0 +1,43 @@
+{% extends "core/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Dashboard</h1>
+        <p class="text-muted mb-0">
+            {% if is_diretor and not escola_em_foco %}Visão geral de toda a rede Naica.
+            {% elif is_diretor %}Indicadores de {{ escola_em_foco.nome }}.
+            {% else %}Indicadores de {{ active_escola.nome }}.{% endif %}
+        </p>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3"><div class="card h-100 shadow-sm"><div class="card-body"><div class="small text-muted">Alunos cadastrados</div><div class="display-6 fw-semibold">{{ indicadores.alunos }}</div></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card h-100 shadow-sm"><div class="card-body"><div class="small text-muted">Oficinas em atividade</div><div class="display-6 fw-semibold">{{ indicadores.oficinas }}</div></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card h-100 shadow-sm"><div class="card-body"><div class="small text-muted">Matrículas cursando</div><div class="display-6 fw-semibold">{{ indicadores.matriculas }}</div></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card h-100 shadow-sm"><div class="card-body"><div class="small text-muted">Presença registrada</div><div class="display-6 fw-semibold">{% if indicadores.frequencia != None %}{{ indicadores.frequencia }}%{% else %}—{% endif %}</div><div class="small text-muted">Em todas as chamadas lançadas</div></div></div></div>
+</div>
+
+{% if unidades %}
+<section class="card shadow-sm">
+    <div class="card-header bg-white"><h2 class="h5 mb-0">Indicadores por Naica</h2></div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Unidade</th><th class="text-end">Alunos</th><th class="text-end">Oficinas</th><th class="text-end">Matrículas</th><th class="text-end">Presença</th><th></th></tr></thead>
+            <tbody>
+                {% for item in unidades %}
+                <tr>
+                    <td>{{ item.escola.nome }}</td><td class="text-end">{{ item.alunos }}</td><td class="text-end">{{ item.oficinas }}</td><td class="text-end">{{ item.matriculas }}</td>
+                    <td class="text-end">{% if item.frequencia != None %}{{ item.frequencia }}%{% else %}—{% endif %}</td>
+                    <td class="text-end"><form method="post" action="{% url 'escolas:selecionar_foco' %}" class="mb-0">{% csrf_token %}<input type="hidden" name="escola" value="{{ item.escola.pk }}"><input type="hidden" name="next" value="{% url 'dashboard:inicio' %}"><button class="btn btn-sm btn-outline-primary" type="submit">Entrar</button></form></td>
+                </tr>
+                {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">Nenhuma unidade cadastrada.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

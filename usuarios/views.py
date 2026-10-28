@@ -3,11 +3,12 @@ from django.contrib.auth import views as auth_views
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, ListView, UpdateView
 
 from core.acesso import NivelAcesso
+from core import acesso
 from core.mixins import DiretorRequiredMixin
 from escolas.models import EscolaNaica
 
@@ -17,6 +18,14 @@ from .forms import UsuarioForm
 class LoginView(auth_views.LoginView):
     template_name = 'usuarios/login.html'
     redirect_authenticated_user = True
+
+    def get_success_url(self):
+        redirect_url = self.get_redirect_url()
+        if redirect_url:
+            return redirect_url
+        if acesso.is_diretor(self.request.user) or acesso.is_coordenador(self.request.user):
+            return reverse('dashboard:inicio')
+        return reverse('core:home')
 
 
 class LogoutView(auth_views.LogoutView):

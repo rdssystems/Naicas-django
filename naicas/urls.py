@@ -13,6 +13,7 @@ urlpatterns = [
     path('matriculas/', include('matriculas.urls')),
     path('frequencia/', include('frequencia.urls')),
     path('escalas/', include('escalas.urls')),
+    path('dashboard/', include('dashboard.urls')),
     path('', include('core.urls')),
 ]
 
