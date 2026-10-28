@@ -154,7 +154,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # O app usuarios fornece as views de login/logout.
 LOGIN_URL = 'usuarios:login'
-LOGIN_REDIRECT_URL = 'core:home'
+LOGIN_REDIRECT_URL = 'core:home'  # Monitor; Diretor e Coordenador vão ao Dashboard (usuarios.views.LoginView)
 LOGOUT_REDIRECT_URL = 'usuarios:login'
 
 # SSO Keycloak (pós-MVP): seguir o padrão da origem, com OIDC_ENABLED ligado

@@ -29,11 +29,11 @@ As regras e decisões do projeto ficam neste arquivo. Leia antes de implementar 
 
 ## Estado atual
 
-MVP completo + escala dos monitores + dashboard. Repositório: `github.com/rdssystems/Naicas-django` (privado, branch `main`).
+MVP completo + escala dos monitores + dashboard. Repositório: `github.com/rdssystems/Naicas-django` (privado, branch `main`). 10 apps locais (`core`, `escolas`, `usuarios`, `oficinas`, `alunos`, `anexos`, `matriculas`, `frequencia`, `escalas`, `dashboard`); PostgreSQL 16 no Docker; Django 5.2.17 em Python 3.12. Dados de demonstração: `popular_demo` (carga grande por unidade) ou `popular_alunos` (ver Rodando local).
 
 | App | O que tem |
 |---|---|
-| `core` | Regras de acesso (`acesso.py`), middleware da unidade ativa, mixins de permissão, `base.html`, painel inicial, CSS da identidade, favicon |
+| `core` | Regras de acesso (`acesso.py`), middleware da unidade ativa, mixins de permissão, `base.html`, página inicial de atalhos, CSS da identidade, favicon |
 | `escolas` | `EscolaNaica` (10 unidades de Uberlândia via migração), CRUD do Diretor, "entrar na unidade" (`foco.py`) |
 | `usuarios` | `Profile` (Diretor/Coordenador/Monitor), login, CRUD de contas (só Diretor) |
 | `oficinas` | `TipoOficina` (por unidade), `Oficina` (dias, horário, status manual), `Designacao` (monitor × oficina × dias), `horarios.py` (choque) |
@@ -59,8 +59,10 @@ docker compose exec web python manage.py createsuperuser
 docker compose logs -f web
 docker compose exec web python manage.py popular_alunos [--quantidade 10] [--escola <slug>] [--seed 42]  # alunos fictícios com cadastro completo (só DEBUG)
 docker compose exec web python manage.py popular_anexos --ficticios   # PDFs fictícios nos obrigatórios pendentes (só DEBUG)
+docker compose exec web python manage.py popular_demo [--seed 2026]   # 30 alunos, 5 oficinas, matrículas e chamadas por unidade (só DEBUG; uma execução)
 ```
 
+- Testes sempre pelo serviço `web` (`docker compose exec web python manage.py test`): fora do Docker o host `db` do Postgres não resolve.
 - Portas: web `8020`, Postgres `127.0.0.1:5436` (8000/5434 são do Gestão Qualificação).
 - `.env` (não versionado) vem do `.env.example`. Com `DEBUG=True` o container usa `runserver`; com `DEBUG=False`, Gunicorn.
 - Alterou `settings.py`? `docker compose restart web`. Alterou o `.env`? `docker compose up -d --force-recreate web` (o `restart` não relê o `.env`).
@@ -74,8 +76,14 @@ docker compose exec web python manage.py popular_anexos --ficticios   # PDFs fic
 
 Mais recente primeiro. Toda alteração entra aqui (ver primeira regra obrigatória).
 
+- **2026-10-28** — **Mesclagem com o commit do Isaque Miranda** (dashboard paralelo + dados de demonstração). Decisão do usuário: fica o dashboard completo (indicadores escolhidos, escopo via `visiveis_para`, frequência (P+J), 16 testes); aproveitados do Isaque o `popular_demo`, o `.gitignore` ampliado e o histórico. `.env.example` voltou a documentar todas as variáveis (mantidos `DB_HOST`/`DB_PORT`). `LOGIN_REDIRECT_URL` voltou a `core:home` (Diretor/Coordenador vão ao Dashboard pela `LoginView`).
 - **2026-10-28** — **Dashboard** (app novo `dashboard`) para Diretor e Coordenador, primeiro item da barra e primeira página após o login (decisão do usuário: Monitor segue no Início, que continua existindo). Indicadores escolhidos pelo usuário: operação de hoje (chamadas pendentes, oficinas sem monitor), alunos (total, incompletos e o que falta, fila de espera), matrículas e ocupação (lotadas), frequência (30 dias, gráfico das 8 semanas com meta 75%, alunos abaixo da meta). Visão geral do Diretor ganha a tabela por unidade com botão "Entrar"; trocar de unidade agora volta ao Dashboard. `alunos.etapas.etapas_pendentes()` adicionado.
-
+- **2026-10-28** — `.gitignore` ampliado para ambientes locais, overrides de Docker Compose e artefatos de cobertura/análise Python, preservando `.env.example` e arquivos de implementação no versionamento.
+- **2026-10-28** — Criado `popular_demo`, comando somente para desenvolvimento, para carregar em cada Naica 30 alunos fictícios, cinco oficinas, duas matrículas por aluno e quatro chamadas por oficina com presença/falta/justificada simuladas. A carga é transacional e recusa duplicação.
+- **2026-10-28** — Carga `popular_demo --seed 2026` executada no banco local de quem rodou o comando (Isaque): 10 Naicas, 300 alunos, 50 oficinas, 600 matrículas e chamadas simuladas.
+- **2026-10-28** — (Isaque, substituído na mesclagem pelo dashboard acima) Criado o app `dashboard`, incluído na navbar e definido como destino pós-login de Diretor e Coordenador. Indicadores de alunos, oficinas em atividade, matrículas cursando e presença respeitam a unidade ativa; Diretor sem foco também vê resumo por Naica e pode entrar na unidade. Monitor mantém a página inicial de atalhos.
+- **2026-10-28** — Revisão inicial do projeto: confirmados os 9 apps locais, a arquitetura de etapas registrada por `ready()`, o escopo aplicado em queryset/view e o PostgreSQL 16 via Docker. Corrigida a descrição que dizia “8 apps”. `manage.py check` passou; a suíte identificou 212 testes, mas ficou impedida fora do Compose porque o host `db` não estava disponível.
+- **2026-10-28** — Adicionado arquivo `.env.example` e ajustada a configuração do ambiente Docker local para desenvolvimento (resolução de conexão com o banco e variáveis de ambiente).
 - **2026-10-26** — `CLAUDE.md` vira a memória do projeto: regra de atualizá-lo a cada alteração, seções "Estado atual" e "Histórico".
 - **2026-10-26** — Spec `naicas_prompt_espinha_dorsal.md` removido **de propósito** pelo usuário; decisões passam a ser registradas aqui.
 - **2026-10-26** — Projeto publicado no GitHub (`rdssystems/Naicas-django`, privado). Histórico auditado: nenhum segredo commitado.

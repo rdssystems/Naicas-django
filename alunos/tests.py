@@ -583,3 +583,32 @@ class EtapaSaudeTests(BaseAlunosTestCase):
         self.assertTrue(acesso.pode_ver_saude_completa(self.coord_a))
         self.assertFalse(acesso.pode_ver_saude_completa(self.monitor))
         self.assertFalse(acesso.pode_ver_saude_emergencia(self.monitor))  # até a decisão de LGPD
+
+
+class PopularDemoCommandTests(TestCase):
+    """Comando de demonstração (Isaque): roda com o código atual e não duplica a carga."""
+
+    def test_cria_carga_em_uma_unidade_e_recusa_duplicar(self):
+        import shutil
+        import tempfile
+        from io import StringIO
+
+        from django.core.management import CommandError, call_command
+        from django.test import override_settings
+
+        from frequencia.models import Chamada
+        from matriculas.models import Matricula
+        from oficinas.models import Oficina
+
+        unidade = EscolaNaica.objects.order_by('pk').first()
+        EscolaNaica.objects.exclude(pk=unidade.pk).delete()  # só uma unidade: teste rápido
+        media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, media, True)
+        with override_settings(DEBUG=True, MEDIA_ROOT=media):
+            call_command('popular_demo', seed=1, stdout=StringIO())
+            self.assertEqual(Aluno.objects.filter(escola=unidade).count(), 30)
+            self.assertEqual(Oficina.objects.filter(escola=unidade, nome__startswith='[DEMO]').count(), 5)
+            self.assertEqual(Matricula.objects.filter(escola=unidade).count(), 60)
+            self.assertTrue(Chamada.objects.exists())
+            with self.assertRaises(CommandError):
+                call_command('popular_demo', seed=1, stdout=StringIO())
