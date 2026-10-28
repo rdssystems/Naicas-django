@@ -12,6 +12,7 @@ As regras e decisões do projeto ficam neste arquivo. Leia antes de implementar 
   3. inclua o `CLAUDE.md` no mesmo commit da alteração.
   Sem essa atualização a tarefa não está concluída.
 
+- **Mais de uma pessoa trabalha neste repositório** (ex.: Isaque Miranda). Antes de começar qualquer tarefa: `git pull` (e veja o Histórico abaixo para saber o que mudou). Se o push for recusado, **nunca force**: faça `git fetch`, veja o que chegou e mescle, perguntando ao usuário quando houver trabalho conflitante.
 - **Toda funcionalidade é um app Django próprio.** `naicas/` só tem settings/urls/wsgi/asgi. Funcionalidade que não cabe em app existente → app novo, registrado em `LOCAL_APPS` e incluído em `naicas/urls.py` com namespace.
 - **Spec driven development:** se faltar informação para implementar (campo, regra, permissão, fluxo), perguntar ao usuário antes de codar e registrar a decisão aqui no CLAUDE.md.
 - **Regra de ouro de escopo:** `Profile.escola` setada sempre vence `nivel_acesso` ao decidir a unidade ativa.
@@ -76,6 +77,7 @@ docker compose exec web python manage.py popular_demo [--seed 2026]   # 30 aluno
 
 Mais recente primeiro. Toda alteração entra aqui (ver primeira regra obrigatória).
 
+- **2026-10-28** — Regra nova: `git pull` antes de começar qualquer tarefa e nunca forçar push, depois do trabalho em paralelo no dashboard (meu e do Isaque) que precisou de mesclagem.
 - **2026-10-28** — **Mesclagem com o commit do Isaque Miranda** (dashboard paralelo + dados de demonstração). Decisão do usuário: fica o dashboard completo (indicadores escolhidos, escopo via `visiveis_para`, frequência (P+J), 16 testes); aproveitados do Isaque o `popular_demo`, o `.gitignore` ampliado e o histórico. `.env.example` voltou a documentar todas as variáveis (mantidos `DB_HOST`/`DB_PORT`). `LOGIN_REDIRECT_URL` voltou a `core:home` (Diretor/Coordenador vão ao Dashboard pela `LoginView`).
 - **2026-10-28** — **Dashboard** (app novo `dashboard`) para Diretor e Coordenador, primeiro item da barra e primeira página após o login (decisão do usuário: Monitor segue no Início, que continua existindo). Indicadores escolhidos pelo usuário: operação de hoje (chamadas pendentes, oficinas sem monitor), alunos (total, incompletos e o que falta, fila de espera), matrículas e ocupação (lotadas), frequência (30 dias, gráfico das 8 semanas com meta 75%, alunos abaixo da meta). Visão geral do Diretor ganha a tabela por unidade com botão "Entrar"; trocar de unidade agora volta ao Dashboard. `alunos.etapas.etapas_pendentes()` adicionado.
 - **2026-10-28** — `.gitignore` ampliado para ambientes locais, overrides de Docker Compose e artefatos de cobertura/análise Python, preservando `.env.example` e arquivos de implementação no versionamento.
