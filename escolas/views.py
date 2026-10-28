@@ -62,4 +62,4 @@ class SelecionarFocoView(DiretorRequiredMixin, View):
         destino = request.POST.get('next')
         if destino and url_has_allowed_host_and_scheme(destino, {request.get_host()}, request.is_secure()):
             return redirect(destino)
-        return redirect('core:home')
+        return redirect('dashboard:painel')  # o Dashboard é a página principal do Diretor

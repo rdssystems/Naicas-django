@@ -383,6 +383,58 @@ a.card .bi { color: var(--naicas-anil); }
 .agenda-legenda { display: inline-block; width: 1.4rem; height: 0.9rem; border-radius: 0.25rem; }
 .agenda-legenda-sem { border: 1.5px dashed var(--naicas-urucum); border-left-width: 3px; background: #fff7f4; }
 
+/* ---------- Dashboard ---------- */
+.indicador {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    height: 100%;
+    padding: 0.9rem 1rem;
+    color: var(--naicas-grafite);
+}
+a.indicador:hover { border-color: var(--naicas-anil); }
+.indicador-rotulo { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bs-secondary-color); }
+.indicador-valor { font-size: 2rem; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; }
+.indicador-detalhe { font-size: 0.78rem; color: var(--bs-secondary-color); }
+.indicador-mini { font-size: 0.78rem; font-weight: 600; padding: 0.1rem 0.55rem; border-radius: 999px; }
+.indicador-mini-alerta { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+.indicador-mini-ok { background: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+
+.medidor-linha + .medidor-linha { margin-top: 0.6rem; }
+.medidor {
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--naicas-anil-claro);
+    overflow: hidden;
+}
+.medidor span { display: block; height: 100%; border-radius: 999px; background: var(--naicas-anil); }
+
+.grafico-rolagem { overflow-x: auto; }
+/* largura mínima: no celular o SVG não encolhe a ponto de os rótulos ficarem ilegíveis */
+.grafico-frequencia { position: relative; min-width: 34rem; }
+.grafico-frequencia svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grafico-frequencia .grade { stroke: var(--naicas-linha); stroke-width: 1; }
+.grafico-frequencia .meta { stroke: var(--bs-secondary-color); stroke-width: 1; stroke-dasharray: 4 4; }
+.grafico-frequencia .eixo { font-size: 11px; fill: var(--bs-secondary-color); }
+.grafico-frequencia .linha { fill: none; stroke: var(--naicas-anil); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.grafico-frequencia .ponto { fill: var(--naicas-anil); stroke: #fff; stroke-width: 2; }
+.grafico-frequencia .ponto-abaixo { fill: var(--naicas-urucum); }
+.grafico-frequencia .mira { stroke: var(--naicas-grafite); stroke-width: 1; stroke-opacity: 0.35; }
+.grafico-frequencia .alvo { fill: transparent; cursor: pointer; outline: none; }
+.grafico-frequencia .alvo:focus-visible { fill: rgba(43, 58, 140, 0.06); }
+.grafico-dica {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    padding: 0.3rem 0.55rem;
+    border-radius: 0.4rem;
+    background: var(--naicas-grafite);
+    color: #fff;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
 /* ---------- Login ---------- */
 .login-cabecalho { text-align: center; margin: 2.5rem 0 1.5rem; }
 .login-cabecalho p { margin-top: 0.9rem; color: var(--bs-secondary-color); }

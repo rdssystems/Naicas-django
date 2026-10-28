@@ -17,6 +17,7 @@ As regras e decisões do projeto ficam neste arquivo. Leia antes de implementar 
 - **Regra de ouro de escopo:** `Profile.escola` setada sempre vence `nivel_acesso` ao decidir a unidade ativa.
 - **`escola = None` NÃO é Diretor:** Monitores são globais (também sem escola) e escopados pelas oficinas designadas (`Oficina.monitores`). Acesso de rede só com `nivel_acesso == 'DIRETOR'` ou superuser.
 - Só o Diretor gerencia contas de usuário.
+- **Dashboard** (app `dashboard`): só Diretor e Coordenador; é a primeira página depois do login para os dois (Monitor continua indo para o Início; `?next=` tem prioridade) e o destino padrão ao trocar de unidade. Respeita o recorte: visão geral = rede inteira + tabela por unidade; unidade em foco ou Coordenador = só a unidade. Indicadores sempre a partir de `acesso.filtrar_por_escola`/`visiveis_para`. Meta de frequência 75% (`indicadores.META_FREQUENCIA`), risco só com ≥3 chamadas. O "Início" continua existindo para todos.
 - **Escala:** monitor ↔ oficina é `oficinas.Designacao` (dias vazio = todos os dias da oficina); as telas ficam no app `escalas` (agenda semanal padrão, aba por monitor, editor por monitor, "Minha semana"). Diretor (rede ou unidade em foco) e Coordenador (só a própria unidade) montam a escala; choque de horário é recusado mesmo entre unidades. A escala só orienta: o monitor designado lança chamada na oficina em qualquer dia. Choque de horário (matrícula e escala) é sempre `oficinas/horarios.py`.
 - Diretor/admin pode "entrar" numa unidade (`escolas/foco.py`, sessão): filtros usam `acesso.filtrar_por_escola`/`visiveis_para`, que já respeitam o foco. Use sempre essas funções; nunca filtre por `Profile.escola` direto.
 - **Dependência entre apps numa direção só:** `alunos` não importa `anexos`/`matriculas`; esses apps registram a sua etapa do cadastro em `alunos/etapas.py` no `ready()`.
@@ -28,7 +29,7 @@ As regras e decisões do projeto ficam neste arquivo. Leia antes de implementar 
 
 ## Estado atual
 
-MVP completo + escala dos monitores. Repositório: `github.com/rdssystems/Naicas-django` (privado, branch `main`).
+MVP completo + escala dos monitores + dashboard. Repositório: `github.com/rdssystems/Naicas-django` (privado, branch `main`).
 
 | App | O que tem |
 |---|---|
@@ -41,6 +42,7 @@ MVP completo + escala dos monitores. Repositório: `github.com/rdssystems/Naicas
 | `matriculas` | Matrícula com vagas, choque de horário, concluir/desistência (etapa 6) |
 | `frequencia` | Chamada P/F/J por data, resumo com % por aluno |
 | `escalas` | Agenda semanal, grade por monitor, editor da escala, "Minha semana" |
+| `dashboard` | Painel do Diretor/Coordenador: operação de hoje, números-chave, frequência semanal (gráfico SVG), risco de evasão, ocupação, pendências de cadastro e, na visão geral, a tabela por unidade (`indicadores.py`, `grafico.py`) |
 
 ### Pendências e decisões em aberto
 - **Tipo de oficina:** remover (A) ou virar lista única da rede, opcional (B)? Aguardando o usuário.
@@ -71,6 +73,8 @@ docker compose exec web python manage.py popular_anexos --ficticios   # PDFs fic
 ## Histórico
 
 Mais recente primeiro. Toda alteração entra aqui (ver primeira regra obrigatória).
+
+- **2026-10-28** — **Dashboard** (app novo `dashboard`) para Diretor e Coordenador, primeiro item da barra e primeira página após o login (decisão do usuário: Monitor segue no Início, que continua existindo). Indicadores escolhidos pelo usuário: operação de hoje (chamadas pendentes, oficinas sem monitor), alunos (total, incompletos e o que falta, fila de espera), matrículas e ocupação (lotadas), frequência (30 dias, gráfico das 8 semanas com meta 75%, alunos abaixo da meta). Visão geral do Diretor ganha a tabela por unidade com botão "Entrar"; trocar de unidade agora volta ao Dashboard. `alunos.etapas.etapas_pendentes()` adicionado.
 
 - **2026-10-26** — `CLAUDE.md` vira a memória do projeto: regra de atualizá-lo a cada alteração, seções "Estado atual" e "Histórico".
 - **2026-10-26** — Spec `naicas_prompt_espinha_dorsal.md` removido **de propósito** pelo usuário; decisões passam a ser registradas aqui.

@@ -1,0 +1,319 @@
+{% extends "core/base.html" %}
+{% load l10n %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+        <h1 class="h4 mb-0">Dashboard</h1>
+        <div class="small text-muted">{% if active_escola %}{{ active_escola }}{% else %}Rede inteira · {{ unidades|length }} unidades{% endif %} · {{ hoje|date:"l, d/m/Y" }}</div>
+    </div>
+</div>
+
+{# ---------- Hoje ---------- #}
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 mb-0"><i class="bi bi-check2-square"></i> Chamadas pendentes hoje</h2>
+                    {% if operacao.oficinas %}<span class="indicador-mini {% if operacao.chamada_pendente %}indicador-mini-alerta{% else %}indicador-mini-ok{% endif %}">{{ operacao.chamada_pendente|length }} de {{ operacao.oficinas|length }}</span>{% endif %}
+                </div>
+                {% if not operacao.oficinas %}
+                    <p class="small text-muted mb-0">Nenhuma oficina acontece hoje.</p>
+                {% else %}
+                    {% for o in operacao.chamada_pendente %}
+                    <div class="d-flex justify-content-between align-items-center border-top py-2">
+                        <div class="small"><span class="fw-semibold">{{ o.nome }}</span> <span class="text-muted">· {% if not active_escola %}{{ o.escola.nome }} · {% endif %}{{ o.horario|time:"H:i" }}–{{ o.horario_fim|time:"H:i" }}</span></div>
+                        <a href="{% url 'frequencia:chamada' o.pk %}?data={{ hoje|date:'Y-m-d' }}" class="btn btn-sm btn-outline-primary text-nowrap">Fazer chamada</a>
+                    </div>
+                    {% empty %}
+                    <p class="small mb-0"><i class="bi bi-check-circle text-success"></i> Todas as chamadas de hoje foram lançadas.</p>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 mb-0"><i class="bi bi-person-exclamation"></i> Sem monitor escalado hoje</h2>
+                    {% if operacao.oficinas %}<span class="indicador-mini {% if operacao.sem_monitor %}indicador-mini-alerta{% else %}indicador-mini-ok{% endif %}">{{ operacao.sem_monitor|length }}</span>{% endif %}
+                </div>
+                {% if not operacao.oficinas %}
+                    <p class="small text-muted mb-0">Nenhuma oficina acontece hoje.</p>
+                {% else %}
+                    {% for o in operacao.sem_monitor %}
+                    <div class="d-flex justify-content-between align-items-center border-top py-2">
+                        <div class="small"><span class="fw-semibold">{{ o.nome }}</span> <span class="text-muted">· {% if not active_escola %}{{ o.escola.nome }} · {% endif %}{{ o.horario|time:"H:i" }}–{{ o.horario_fim|time:"H:i" }}</span></div>
+                        <a href="{% url 'escalas:grade' %}" class="btn btn-sm btn-outline-primary text-nowrap">Ver escala</a>
+                    </div>
+                    {% empty %}
+                    <p class="small mb-0"><i class="bi bi-check-circle text-success"></i> Todas as oficinas de hoje têm monitor.</p>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ---------- Números-chave ---------- #}
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="{% url 'alunos:lista' %}" class="indicador card shadow-sm text-decoration-none">
+            <span class="indicador-rotulo">Alunos</span>
+            <span class="indicador-valor">{{ alunos.total }}</span>
+            <span class="indicador-detalhe">no cadastro</span>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="{% url 'alunos:lista' %}" class="indicador card shadow-sm text-decoration-none">
+            <span class="indicador-rotulo">Incompletos</span>
+            <span class="indicador-valor">{{ alunos.incompletos }}</span>
+            <span class="indicador-detalhe">{% if alunos.incompletos %}<i class="bi bi-exclamation-triangle text-warning"></i> cadastros com etapas pendentes{% else %}cadastros em dia{% endif %}</span>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="indicador card shadow-sm">
+            <span class="indicador-rotulo">Fila de espera</span>
+            <span class="indicador-valor">{{ alunos.fila_espera }}</span>
+            <span class="indicador-detalhe">sem matrícula em curso</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="indicador card shadow-sm">
+            <span class="indicador-rotulo">Matrículas</span>
+            <span class="indicador-valor">{{ ocupacao.cursando }}</span>
+            <span class="indicador-detalhe">em curso · {{ ocupacao.lotadas|length }} oficina{{ ocupacao.lotadas|length|pluralize }} lotada{{ ocupacao.lotadas|length|pluralize }}</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="indicador card shadow-sm">
+            <span class="indicador-rotulo">Ocupação</span>
+            <span class="indicador-valor">{% if ocupacao.percentual is not None %}{{ ocupacao.percentual }}%{% else %}—{% endif %}</span>
+            <span class="indicador-detalhe">{{ ocupacao.ocupadas }} de {{ ocupacao.vagas }} vagas</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="indicador card shadow-sm">
+            <span class="indicador-rotulo">Frequência</span>
+            <span class="indicador-valor">{% if frequencia.percentual is not None %}{{ frequencia.percentual }}%{% else %}—{% endif %}</span>
+            <span class="indicador-detalhe">
+                {% if frequencia.percentual is None %}nenhuma chamada nos últimos 30 dias
+                {% elif frequencia.percentual < meta %}<i class="bi bi-exclamation-triangle text-danger"></i> 30 dias · abaixo da meta de {{ meta }}%
+                {% else %}<i class="bi bi-check-circle text-success"></i> 30 dias · meta de {{ meta }}%{% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+{# ---------- Frequência ---------- #}
+<div class="row g-3 mb-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-1">Frequência por semana</h2>
+                <p class="small text-muted mb-2">Presenças e faltas justificadas sobre o total de chamadas, nas últimas 8 semanas. Linha tracejada: meta de {{ meta }}%.</p>
+                {% if grafico.tem_dados %}
+                {% with g=grafico %}
+                <div class="grafico-rolagem"><div class="grafico-frequencia" data-grafico>
+                    <svg viewBox="0 0 {{ g.largura }} {{ g.altura }}" role="img" aria-label="Frequência semanal nas últimas 8 semanas. Detalhes na tabela abaixo.">
+                        {% for linha in g.linhas_grade %}
+                            <line x1="{{ g.esq }}" x2="{{ g.dir }}" y1="{{ linha.y|unlocalize }}" y2="{{ linha.y|unlocalize }}" class="grade"/>
+                            <text x="{{ g.esq|add:'-8' }}" y="{{ linha.y|unlocalize }}" class="eixo" text-anchor="end" dominant-baseline="middle">{{ linha.valor }}%</text>
+                        {% endfor %}
+                        <line x1="{{ g.esq }}" x2="{{ g.dir }}" y1="{{ g.meta.y|unlocalize }}" y2="{{ g.meta.y|unlocalize }}" class="meta"/>
+                        <text x="{{ g.dir }}" y="{{ g.meta.y|unlocalize }}" dy="-5" class="eixo" text-anchor="end">meta {{ g.meta.valor }}%</text>
+                        {% for p in g.pontos %}
+                            <text x="{{ p.x|unlocalize }}" y="{{ g.altura|add:'-8' }}" class="eixo" text-anchor="middle">{{ p.rotulo }}</text>
+                        {% endfor %}
+                        <line class="mira" x1="0" x2="0" y1="12" y2="{{ g.base_y }}" hidden/>
+                        {% for seg in g.segmentos %}
+                            <polyline points="{{ seg }}" class="linha"/>
+                        {% endfor %}
+                        {% for p in g.pontos %}{% if p.y is not None %}
+                            <circle cx="{{ p.x|unlocalize }}" cy="{{ p.y|unlocalize }}" r="4" class="ponto{% if p.semana.percentual < meta %} ponto-abaixo{% endif %}"/>
+                        {% endif %}{% endfor %}
+                        {% for p in g.pontos %}
+                            <rect class="alvo" x="{{ p.x|unlocalize }}" y="0" width="1" height="{{ g.base_y }}" tabindex="0"
+                                  data-x="{{ p.x|unlocalize }}" data-meia="{{ g.meia_coluna|unlocalize }}"
+                                  data-texto="Semana de {{ p.rotulo }}: {% if p.semana.percentual is not None %}{{ p.semana.percentual }}% ({{ p.semana.chamadas }} chamada{{ p.semana.chamadas|pluralize }}){% else %}sem chamadas{% endif %}"
+                                  aria-label="Semana de {{ p.rotulo }}: {% if p.semana.percentual is not None %}{{ p.semana.percentual }}%{% else %}sem chamadas{% endif %}"/>
+                        {% endfor %}
+                    </svg>
+                    <div class="grafico-dica" hidden></div>
+                </div></div>
+                <details class="small mt-2">
+                    <summary class="text-muted">Ver em tabela</summary>
+                    <table class="table table-sm mt-2 mb-0">
+                        <thead><tr><th>Semana</th><th class="text-end">Frequência</th><th class="text-end">Chamadas</th></tr></thead>
+                        <tbody>
+                        {% for p in g.pontos %}
+                            <tr><td>{{ p.rotulo }}</td><td class="text-end">{% if p.semana.percentual is not None %}{{ p.semana.percentual }}%{% else %}—{% endif %}</td><td class="text-end">{{ p.semana.chamadas }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </details>
+                {% endwith %}
+                {% else %}
+                    <p class="small text-muted mb-0">O gráfico aparece quando houver chamadas lançadas nas últimas 8 semanas.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-1"><i class="bi bi-exclamation-triangle text-danger"></i> Frequência abaixo de {{ meta }}%</h2>
+                <p class="small text-muted mb-2">Alunos em curso com pelo menos 3 chamadas. Risco de evasão.</p>
+                {% for m in frequencia.risco|slice:":8" %}
+                <div class="d-flex justify-content-between align-items-center border-top py-2 small">
+                    <div>
+                        <a href="{% url 'alunos:detalhe' m.aluno.pk %}" class="fw-semibold text-decoration-none">{{ m.aluno.nome }}</a>
+                        <div class="text-muted">{{ m.oficina.nome }} · {{ m.ok }} de {{ m.aulas }} aulas</div>
+                    </div>
+                    <span class="fw-semibold text-danger">{{ m.percentual }}%</span>
+                </div>
+                {% empty %}
+                    <p class="small mb-0"><i class="bi bi-check-circle text-success"></i> Nenhum aluno abaixo da meta.</p>
+                {% endfor %}
+                {% if frequencia.risco|length > 8 %}<p class="small text-muted mt-2 mb-0">e mais {{ frequencia.risco|length|add:"-8" }}.</p>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ---------- Ocupação e cadastros ---------- #}
+<div class="row g-3 mb-3">
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 mb-0">Ocupação das oficinas</h2>
+                    <a href="{% url 'oficinas:lista' %}" class="small">Ver oficinas</a>
+                </div>
+                {% for o in ocupacao.oficinas|slice:":8" %}
+                <div class="medidor-linha">
+                    <div class="d-flex justify-content-between small">
+                        <a href="{% url 'matriculas:oficina' o.pk %}" class="text-decoration-none text-truncate">{{ o.nome }}{% if not active_escola %} <span class="text-muted">· {{ o.escola.nome }}</span>{% endif %}</a>
+                        <span class="text-nowrap ms-2">{{ o.ocupadas }}/{{ o.vagas }}{% if o.ocupadas >= o.vagas %} · <strong>lotada</strong>{% endif %}</span>
+                    </div>
+                    <div class="medidor" role="img" aria-label="{{ o.percentual }}% ocupada"><span style="width: {{ o.percentual }}%;"></span></div>
+                </div>
+                {% empty %}
+                    <p class="small text-muted mb-0">Nenhuma oficina aberta ou em andamento.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h6 mb-1">O que falta nos cadastros</h2>
+                <p class="small text-muted mb-2">Etapas pendentes entre os {{ alunos.incompletos }} cadastro{{ alunos.incompletos|pluralize }} incompleto{{ alunos.incompletos|pluralize }}.</p>
+                {% for etapa, quantidade in alunos.pendencias %}
+                <div class="d-flex justify-content-between border-top py-2 small">
+                    <span>{{ etapa }}</span><span class="fw-semibold">{{ quantidade }} aluno{{ quantidade|pluralize }}</span>
+                </div>
+                {% empty %}
+                    <p class="small mb-0"><i class="bi bi-check-circle text-success"></i> Todos os cadastros estão completos.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ---------- Comparação entre unidades (visão geral do Diretor) ---------- #}
+{% if unidades %}
+<div class="card shadow-sm">
+    <div class="card-body pb-0">
+        <h2 class="h6 mb-1">Unidades</h2>
+        <p class="small text-muted mb-2">Clique em "Entrar" para ver o dashboard de uma Naica.</p>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Unidade</th>
+                    <th class="text-end">Alunos</th>
+                    <th class="text-end">Matrículas</th>
+                    <th style="min-width: 9rem;">Ocupação</th>
+                    <th class="text-end">Frequência · 30d</th>
+                    <th>Hoje</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for u in unidades %}
+                <tr>
+                    <td class="fw-semibold">{{ u.escola.nome }}</td>
+                    <td class="text-end">{{ u.alunos }}</td>
+                    <td class="text-end">{{ u.cursando }}</td>
+                    <td>
+                        {% if u.ocupacao is not None %}
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="medidor flex-grow-1" role="img" aria-label="{{ u.ocupacao }}% ocupada"><span style="width: {{ u.ocupacao }}%;"></span></div>
+                            <span class="small text-nowrap">{{ u.ocupacao }}%</span>
+                        </div>
+                        {% else %}<span class="small text-muted">sem oficinas</span>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if u.frequencia is None %}<span class="text-muted">—</span>
+                        {% elif u.frequencia < meta %}<span class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle"></i> {{ u.frequencia }}%</span>
+                        {% else %}{{ u.frequencia }}%{% endif %}
+                    </td>
+                    <td class="small">
+                        {% if u.pendentes_hoje %}<div><i class="bi bi-check2-square text-warning"></i> {{ u.pendentes_hoje }} chamada{{ u.pendentes_hoje|pluralize }} pendente{{ u.pendentes_hoje|pluralize }}</div>{% endif %}
+                        {% if u.sem_monitor_hoje %}<div><i class="bi bi-person-exclamation text-danger"></i> {{ u.sem_monitor_hoje }} sem monitor</div>{% endif %}
+                        {% if not u.pendentes_hoje and not u.sem_monitor_hoje %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        <form method="post" action="{% url 'escolas:selecionar_foco' %}" class="mb-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="escola" value="{{ u.escola.pk }}">
+                            <input type="hidden" name="next" value="{% url 'dashboard:painel' %}">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Entrar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Dica do gráfico: passar o mouse, tocar ou focar (Tab) numa semana mostra o valor.
+    (function () {
+        const caixa = document.querySelector('[data-grafico]');
+        if (!caixa) return;
+        const svg = caixa.querySelector('svg');
+        const dica = caixa.querySelector('.grafico-dica');
+        const mira = svg.querySelector('.mira');
+        caixa.querySelectorAll('.alvo').forEach(function (alvo) {
+            // Área de toque = a coluna inteira da semana (maior que o ponto).
+            const x = parseFloat(alvo.dataset.x), meia = parseFloat(alvo.dataset.meia);
+            alvo.setAttribute('x', x - meia);
+            alvo.setAttribute('width', meia * 2);
+            function mostrar() {
+                mira.setAttribute('x1', x); mira.setAttribute('x2', x); mira.hidden = false;
+                dica.textContent = alvo.dataset.texto;
+                dica.hidden = false;
+                const escala = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+                dica.style.left = Math.min(Math.max(x * escala, 70), svg.getBoundingClientRect().width - 70) + 'px';
+            }
+            function esconder() { dica.hidden = true; mira.hidden = true; }
+            alvo.addEventListener('mouseenter', mostrar);
+            alvo.addEventListener('focus', mostrar);
+            alvo.addEventListener('touchstart', mostrar, {passive: true});
+            alvo.addEventListener('mouseleave', esconder);
+            alvo.addEventListener('blur', esconder);
+        });
+    })();
+</script>
+{% endblock %}

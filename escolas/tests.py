@@ -97,7 +97,7 @@ class FocoNaUnidadeTests(TestCase):
         self.assertContains(self.client.get(reverse('core:home')), '<span class="fita">Naicas</span>')
 
     def test_dentro_da_unidade_filtra_e_mostra_o_nome_na_barra(self):
-        self.assertRedirects(self.entrar(self.canaa), reverse('core:home'))
+        self.assertRedirects(self.entrar(self.canaa), reverse('dashboard:painel'))  # Dashboard é a página principal do Diretor
         self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança'})
         self.assertEqual(self.nomes(reverse('alunos:lista'), 'alunos'), {'Ana'})
         response = self.client.get(reverse('core:home'))
@@ -151,7 +151,7 @@ class FocoNaUnidadeTests(TestCase):
 
     def test_so_admin_e_diretor_entram_em_unidades(self):
         superuser = User.objects.create_superuser('admin', password='x')  # sem Profile: tratado como Diretor
-        self.assertRedirects(self.entrar(self.norte, user=superuser), reverse('core:home'))
+        self.assertRedirects(self.entrar(self.norte, user=superuser), reverse('dashboard:painel'))
         self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Violão'})
         for user in (self.coord, self.monitor):
             self.assertEqual(self.entrar(self.norte, user=user).status_code, 403, user)

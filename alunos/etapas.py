@@ -61,6 +61,14 @@ def cadastro_completo(aluno):
     return all(e.concluida(aluno) for e in _registro.values() if e.conta_para_completo)
 
 
+def etapas_pendentes(aluno):
+    """Nomes das etapas obrigatórias (que contam para o selo) ainda não concluídas."""
+    return [
+        e.nome for e in sorted(_registro.values(), key=lambda e: e.numero)
+        if e.conta_para_completo and not e.concluida(aluno)
+    ]
+
+
 def registrar_etapas_do_cadastro():
     """Etapas 1-4 (chamado no AlunosConfig.ready)."""
     registrar(Etapa(1, 'Dados do aluno', 'alunos:etapa_dados', lambda a: hasattr(a, 'endereco')))
