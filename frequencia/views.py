@@ -1,139 +1,147 @@
 from datetime import date
+from itertools import groupby
 
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import urlencode
 from django.views import View
 
+from alunos.models import Aluno
 from core import acesso
-from core.mixins import MonitorRequiredMixin
-from oficinas.models import Oficina
+from core.mixins import PerfilRequiredMixin
+from escolas.models import EscolaNaica
+from oficinas.models import AtividadeCronograma
 
-from . import regras
-from .models import Chamada, RegistroAula
-
-
-class OficinaFrequenciaMixin(MonitorRequiredMixin):
-    """Diretor, Coordenador da unidade da oficina e Monitor designado nela."""
-
-    def get_oficina(self):
-        return get_object_or_404(Oficina.objects.select_related('escola'), pk=self.kwargs['pk'])
+from .models import ChamadaGeral
 
 
-class FrequenciaOficinaView(OficinaFrequenciaMixin, View):
-    template_name = 'frequencia/oficina_frequencia.html'
-
-    def get(self, request, pk):
-        oficina = self.oficina
-        aulas = oficina.aulas.select_related('lancado_por').annotate(
-            presentes=Count('chamadas', filter=Q(chamadas__status_presenca=Chamada.Presenca.PRESENTE)),
-            faltas=Count('chamadas', filter=Q(chamadas__status_presenca=Chamada.Presenca.FALTA)),
-            justificadas=Count('chamadas', filter=Q(chamadas__status_presenca=Chamada.Presenca.JUSTIFICADA)),
-        )
-        hoje = timezone.localdate()
-        return render(request, self.template_name, {
-            'oficina': oficina,
-            'aulas': aulas,
-            'resumo': regras.resumo_por_matricula(oficina),
-            'data_sugerida': min(max(hoje, oficina.data_inicio), oficina.data_fim, hoje),
-            'hoje': hoje,
-            'pode_excluir': acesso.pode_gerenciar_escola(request.user, oficina.escola_id),
-        })
+class GestaoFrequenciaMixin(PerfilRequiredMixin):
+    def tem_permissao(self, user):
+        return acesso.is_diretor(user) or acesso.is_coordenador(user)
 
 
-class ChamadaView(OficinaFrequenciaMixin, View):
-    """Lança ou corrige a chamada de uma data (?data=AAAA-MM-DD)."""
+class ChamadaNaicaView(GestaoFrequenciaMixin, View):
+    """Uma presença por atendido/data na unidade, sem depender de oficinas."""
 
-    template_name = 'frequencia/chamada.html'
+    template_name = 'frequencia/chamada_naica.html'
 
-    def ler_data(self, valor):
+    def unidades_visiveis(self):
+        return acesso.filtrar_por_escola(self.request.user, EscolaNaica.objects.all(), campo='pk')
+
+    def unidade(self, unidade_id=None):
+        ativa = acesso.escola_ativa(self.request.user)
+        if ativa:
+            return ativa
+        unidade_id = unidade_id or self.request.GET.get('escola')
+        if unidade_id and not str(unidade_id).isdigit():
+            raise Http404
+        return get_object_or_404(self.unidades_visiveis(), pk=unidade_id) if unidade_id else None
+
+    @staticmethod
+    def ler_data(valor):
         try:
             return date.fromisoformat(valor)
         except (TypeError, ValueError):
             return None
 
-    def voltar(self, mensagem):
-        messages.error(self.request, mensagem)
-        return redirect('frequencia:oficina', pk=self.oficina.pk)
+    def linhas(self, escola, data, turno=''):
+        existentes = {
+            chamada.aluno_id: chamada
+            for chamada in ChamadaGeral.objects.filter(escola=escola, data=data)
+        }
+        # O histórico continua corrigível após mudança de unidade ou status.
+        alunos = Aluno.objects.filter(Q(escola=escola, status=Aluno.Status.ATIVO) | Q(pk__in=existentes))
+        if turno:
+            alunos = alunos.filter(turno=turno)
+        # Alunos antigos sem classificação também participam da chamada.
+        linhas = [{
+            'aluno': aluno, 'chamada': existentes.get(aluno.pk),
+            'revisar': aluno.pk in existentes and not existentes[aluno.pk].status_presenca,
+        } for aluno in alunos]
+        linhas.sort(key=lambda linha: (
+            linha['aluno'].turno or 'Z', linha['aluno'].turma or 'Z',
+            linha['aluno'].nome.casefold(), linha['aluno'].pk,
+        ))
+        return [{
+            'turno_label': dict(Aluno.Turno.choices).get(turno, 'Turno pendente'),
+            'turma_label': dict(Aluno.Turma.choices).get(turma, 'Turma pendente'),
+            'alunos': list(itens),
+        } for (turno, turma), itens in groupby(linhas, lambda linha: (linha['aluno'].turno, linha['aluno'].turma))]
 
-    def linhas(self, data, registro):
-        existentes = {c.matricula_id: c for c in registro.chamadas.select_related('matricula__aluno')} if registro else {}
-        matriculas = {m.pk: m for m in regras.matriculas_ativas_na_data(self.oficina, data)}
-        # Na correção, quem já tinha chamada continua na lista mesmo se a matrícula mudou depois.
-        for chamada in existentes.values():
-            matriculas.setdefault(chamada.matricula_id, chamada.matricula)
-        return [
-            {'matricula': m, 'chamada': existentes.get(m.pk)}
-            for m in sorted(matriculas.values(), key=lambda m: m.aluno.nome)
-        ]
-
-    def get(self, request, pk):
-        data = self.ler_data(request.GET.get('data'))
-        if data is None:
-            return self.voltar('Informe a data da aula.')
-        try:
-            aviso = regras.validar_data_aula(self.oficina, data)
-        except regras.DataInvalida as erro:
-            return self.voltar(str(erro))
-        registro = RegistroAula.objects.filter(oficina=self.oficina, data_aula=data).first()
+    def render(self, request, escola, data, erro=None, turno='', grupos=None):
+        if turno not in ('', *Aluno.Turno.values):
+            turno = ''
+        if grupos is None:
+            grupos = self.linhas(escola, data, turno) if escola and not erro and data <= timezone.localdate() else []
         return render(request, self.template_name, {
-            'oficina': self.oficina, 'data': data, 'registro': registro, 'aviso': aviso,
-            'linhas': self.linhas(data, registro), 'presencas': Chamada.Presenca.choices,
+            'escola': escola, 'escolas': self.unidades_visiveis(), 'data': data,
+            'turno': turno, 'grupos': grupos, 'presencas': ChamadaGeral.Presenca.choices,
+            'erro': erro, 'total_alunos': sum(len(grupo['alunos']) for grupo in grupos),
         })
 
-    def post(self, request, pk):
+    def get(self, request):
+        escola = self.unidade()
+        data = self.ler_data(request.GET['data']) if request.GET.get('data') else timezone.localdate()
+        erro = 'Informe uma data válida.' if data is None else None
+        data = data or timezone.localdate()
+        if data > timezone.localdate():
+            erro = 'Não é possível lançar chamada para uma data futura.'
+        return self.render(request, escola, data, erro, request.GET.get('turno', ''))
+
+    def post(self, request):
+        escola = self.unidade(request.POST.get('escola'))
         data = self.ler_data(request.POST.get('data'))
+        turno = request.POST.get('turno', '')
+        if turno not in ('', *Aluno.Turno.values):
+            return self.render(request, escola, data or timezone.localdate(), 'Informe um turno válido.')
         if data is None:
-            return self.voltar('Informe a data da aula.')
-        try:
-            regras.validar_data_aula(self.oficina, data)
-        except regras.DataInvalida as erro:
-            return self.voltar(str(erro))
-
-        registro = RegistroAula.objects.filter(oficina=self.oficina, data_aula=data).first()
-        linhas = self.linhas(data, registro)
-        validos = set(Chamada.Presenca.values)
-        respostas = {}
-        for linha in linhas:
-            m = linha['matricula']
-            valor = request.POST.get(f'presenca_{m.pk}')
-            if valor not in validos:
-                messages.error(request, f'Marque a presença de {m.aluno.nome}.')
-                return redirect(f"{reverse('frequencia:chamada', args=[self.oficina.pk])}?{urlencode({'data': data.isoformat()})}")
-            respostas[m.pk] = (valor, request.POST.get(f'obs_{m.pk}', '').strip()[:255])
-
+            return self.render(request, escola, timezone.localdate(), 'Informe uma data válida.', turno)
+        if escola is None:
+            return self.render(request, escola, data, 'Selecione uma Naica para lançar a chamada.', turno)
+        if data > timezone.localdate():
+            return self.render(request, escola, data, 'Não é possível lançar chamada para uma data futura.', turno)
+        grupos = self.linhas(escola, data, turno)
+        respostas = []
+        erro = None
+        for grupo in grupos:
+            for linha in grupo['alunos']:
+                aluno = linha['aluno']
+                valor = request.POST.get(f'presenca_{aluno.pk}')
+                obs = request.POST.get(f'obs_{aluno.pk}', '').strip()[:255]
+                if valor not in ChamadaGeral.Presenca.values:
+                    erro = f'Marque a presença de {aluno.nome}.'
+                linha['chamada'] = {'status_presenca': valor, 'observacoes': obs}
+                respostas.append((aluno, valor, obs))
+        if erro:
+            return self.render(request, escola, data, erro, turno, grupos)
         with transaction.atomic():
-            registro, criado = RegistroAula.objects.get_or_create(
-                oficina=self.oficina, data_aula=data, defaults={'lancado_por': request.user},
-            )
-            registro.observacoes = request.POST.get('observacoes', '').strip()
-            registro.atualizado_por = request.user
-            registro.save()
-            for matricula_id, (presenca, obs) in respostas.items():
-                Chamada.objects.update_or_create(
-                    registro_aula=registro, matricula_id=matricula_id,
-                    defaults={'status_presenca': presenca, 'observacoes': obs},
+            for aluno, presenca, observacoes in respostas:
+                chamada, criada = ChamadaGeral.objects.get_or_create(
+                    escola=escola, aluno=aluno, data=data,
+                    defaults={'status_presenca': presenca, 'observacoes': observacoes, 'lancado_por': request.user},
                 )
-        faltas = sum(1 for p, _ in respostas.values() if p == Chamada.Presenca.FALTA)
-        acao = 'lançada' if criado else 'corrigida'
-        messages.success(request, f'Chamada de {data:%d/%m/%Y} {acao}: {len(respostas)} aluno(s), {faltas} falta(s).')
-        return redirect('frequencia:oficina', pk=self.oficina.pk)
+                if not criada:
+                    chamada.status_presenca = presenca
+                    chamada.observacoes = observacoes
+                    chamada.atualizado_por = request.user
+                    chamada.save(update_fields=['status_presenca', 'observacoes', 'atualizado_por', 'atualizado_em'])
+        messages.success(request, f'Chamada geral de {data:%d/%m/%Y} salva: {len(respostas)} atendido(s).')
+        return redirect(f"{reverse('frequencia:chamada_naica')}?{urlencode({'escola': escola.pk, 'data': data.isoformat(), 'turno': turno})}")
 
 
-class ExcluirAulaView(OficinaFrequenciaMixin, View):
-    """Só Diretor/Coordenador (aula lançada na data errada). Monitor não exclui."""
+class FrequenciaOficinaLegadaView(GestaoFrequenciaMixin, View):
+    """Atalhos antigos levam à chamada geral; não há escrita por oficina."""
 
-    http_method_names = ['post']
+    http_method_names = ['get']
 
-    def post(self, request, pk, aula_pk):
-        if not acesso.pode_gerenciar_escola(request.user, self.oficina.escola_id):
-            raise PermissionDenied
-        aula = get_object_or_404(RegistroAula, pk=aula_pk, oficina=self.oficina)
-        aula.delete()
-        messages.success(request, f'Chamada de {aula.data_aula:%d/%m/%Y} excluída.')
-        return redirect('frequencia:oficina', pk=self.oficina.pk)
+    def get(self, request, pk, **kwargs):
+        oficina = get_object_or_404(acesso.filtrar_por_escola(request.user, AtividadeCronograma.objects.all()), pk=pk)
+        params = {'escola': oficina.escola_id}
+        if data := request.GET.get('data'):
+            params['data'] = data
+        return redirect(f"{reverse('frequencia:chamada_naica')}?{urlencode(params)}")

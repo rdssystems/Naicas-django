@@ -33,7 +33,7 @@ JS do formulário de responsável:
                     if (input) input.value = valor;
                 }
                 form.dispatchEvent(new Event('change', {bubbles: true}));
-                status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Responsável já cadastrado na rede: dados preenchidos. Alterações valem para todos os alunos dele.</span>';
+                status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Responsável já cadastrado na rede: dados preenchidos. Alterações valem para todos os atendidos dele.</span>';
             } catch (e) {
                 status.textContent = '';
             }

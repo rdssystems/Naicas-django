@@ -32,8 +32,8 @@ class FichaSaudeInline(admin.StackedInline):
 
 @admin.register(Aluno)
 class AlunoAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'cpf', 'escola', 'data_nascimento', 'ano_escolar')
-    list_filter = ('escola', 'ano_escolar', 'sexo')
+    list_display = ('nome', 'cpf', 'escola', 'status', 'data_nascimento', 'ano_escolar')
+    list_filter = ('escola', 'status', 'ano_escolar', 'sexo')
     search_fields = ('nome', 'cpf', 'nome_mae')
     inlines = [EnderecoInline, AlunoResponsavelInline, MembroFamiliarInline, ContatoEmergenciaInline, FichaSaudeInline]
     readonly_fields = ('criado_em', 'atualizado_em', 'criado_por')

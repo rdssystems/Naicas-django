@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
@@ -14,13 +14,14 @@ from escolas.models import EscolaNaica
 
 from . import etapas
 from .forms import (
-    AlunoForm, ContatoEmergenciaFormSet, EnderecoForm, FichaSaudeForm, MembroFamiliarFormSet, ResponsavelForm,
+    AlunoForm, ContatoEmergenciaFormSet, EnderecoForm, FichaSaudeForm, MembroFamiliarFormSet,
+    OcorrenciaForm, ResponsavelForm, StatusAlunoForm,
 )
 from .models import Aluno, AlunoResponsavel, FichaSaude, Responsavel
 
 
 class CadastroAlunoMixin(PerfilRequiredMixin):
-    """Cadastro de aluno: só Diretor e Coordenador; Monitor não acessa."""
+    """Cadastro de atendido: só Diretor e Coordenador; Monitor não acessa."""
 
     def tem_permissao(self, user):
         return acesso.is_diretor(user) or acesso.is_coordenador(user)
@@ -49,7 +50,18 @@ class AlunoListView(CadastroAlunoMixin, ListView):
             qs = qs.filter(filtro)
         if (escola := params.get('escola')) and acesso.is_diretor(self.request.user):
             qs = qs.filter(escola_id=escola)
-        return qs
+        if turno := params.get('turno'):
+            qs = qs.filter(turno=turno)
+        if turma := params.get('turma'):
+            qs = qs.filter(turma=turma)
+        if status := params.get('status'):
+            qs = qs.filter(status=status)
+        if params.get('classificacao') == 'pendente':
+            qs = qs.ativos().filter(Q(turno__isnull=True) | Q(turno='') | Q(turma__isnull=True) | Q(turma=''))
+        return qs.annotate(ordem_status=Case(
+            When(status=Aluno.Status.ATIVO, then=Value(0)),
+            default=Value(1), output_field=IntegerField(),
+        )).order_by('ordem_status', 'nome', 'pk')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -59,6 +71,16 @@ class AlunoListView(CadastroAlunoMixin, ListView):
         filtros = self.request.GET.copy()
         filtros.pop('page', None)
         context['filtros_querystring'] = filtros.urlencode()
+        context['turnos'] = Aluno.Turno.choices
+        context['turmas'] = Aluno.Turma.choices
+        context['status_opcoes'] = Aluno.Status.choices
+        context['totais_status'] = self.object_list.aggregate(
+            ativos=Count('pk', filter=Q(status=Aluno.Status.ATIVO)),
+            inativos=Count('pk', filter=Q(status=Aluno.Status.INATIVO)),
+        )
+        context['alunos_pendentes_classificacao'] = self.alunos_visiveis().ativos().filter(
+            Q(turno__isnull=True) | Q(turno='') | Q(turma__isnull=True) | Q(turma='')
+        ).count()
         return context
 
 
@@ -74,6 +96,8 @@ class AlunoDetailView(CadastroAlunoMixin, DetailView):
         context['vinculos'] = self.object.responsaveis_vinculos.select_related('responsavel')
         context['membros'] = self.object.membros_familia.all()
         context['contatos'] = self.object.contatos_emergencia.all()
+        context['ocorrencias'] = self.object.ocorrencias.select_related('autor').all()
+        context['ocorrencia_form'] = OcorrenciaForm()
         # Dado sensível: só vai para o template se o papel puder ver.
         user = self.request.user
         ficha = getattr(self.object, 'ficha_saude', None)
@@ -82,9 +106,39 @@ class AlunoDetailView(CadastroAlunoMixin, DetailView):
         context['ficha'] = ficha if context['pode_ver_saude_emergencia'] else None
         return context
 
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = OcorrenciaForm(request.POST)
+        if form.is_valid():
+            ocorrencia = form.save(commit=False)
+            ocorrencia.aluno = self.object
+            ocorrencia.autor = request.user
+            ocorrencia.save()
+            messages.success(request, 'Ocorrência registrada com sucesso.')
+            return redirect('alunos:detalhe', pk=self.object.pk)
+
+        context = self.get_context_data(object=self.object)
+        context['ocorrencia_form'] = form
+        return self.render_to_response(context)
+
+
+class AlunoStatusView(CadastroAlunoMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        aluno = self.get_aluno()
+        form = StatusAlunoForm(request.POST)
+        if form.is_valid():
+            aluno.status = form.cleaned_data['status']
+            aluno.save(update_fields=['status', 'atualizado_em'])
+            messages.success(request, f'Status de {aluno.nome} atualizado para {aluno.get_status_display()}.')
+        else:
+            messages.error(request, 'Selecione um status válido para o atendido.')
+        return redirect('alunos:detalhe', pk=aluno.pk)
+
 
 class EtapaDadosView(CadastroAlunoMixin, View):
-    """Etapa 1: dados do aluno + endereço. Sem pk = cadastro novo."""
+    """Etapa 1: dados do atendido + endereço. Sem pk = cadastro novo."""
 
     template_name = 'alunos/etapa_dados.html'
 
@@ -127,9 +181,9 @@ class EtapaDadosView(CadastroAlunoMixin, View):
             endereco.aluno = aluno
             endereco.save()
         if novo:
-            messages.success(request, f'Aluno "{aluno.nome}" cadastrado. Agora informe o responsável.')
+            messages.success(request, f'Atendido "{aluno.nome}" cadastrado. Agora informe o responsável.')
             return redirect('alunos:etapa_responsaveis', pk=aluno.pk)
-        messages.success(request, 'Dados do aluno atualizados.')
+        messages.success(request, 'Dados do atendido atualizados.')
         return redirect('alunos:detalhe', pk=aluno.pk)
 
 
@@ -159,7 +213,7 @@ class EtapaResponsaveisView(CadastroAlunoMixin, View):
             return self.render(aluno, form)
         with transaction.atomic():
             responsavel = form.save()
-        messages.success(request, f'Responsável "{responsavel.nome}" vinculado ao aluno.')
+        messages.success(request, f'Responsável "{responsavel.nome}" vinculado ao atendido.')
         return redirect('alunos:etapa_responsaveis', pk=aluno.pk)
 
 
@@ -294,7 +348,7 @@ class ResponsavelRemoverView(CadastroAlunoMixin, View):
         vinculo = get_object_or_404(AlunoResponsavel, pk=vinculo_pk, aluno=aluno)
         nome = vinculo.responsavel.nome
         vinculo.delete()
-        messages.success(request, f'{nome} não é mais responsável por este aluno.')
+        messages.success(request, f'{nome} não é mais responsável por este atendido.')
         return redirect('alunos:etapa_responsaveis', pk=aluno.pk)
 
 

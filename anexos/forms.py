@@ -25,6 +25,6 @@ class TipoDocumentoForm(forms.ModelForm):
         model = TipoDocumento
         fields = ['nome', 'obrigatorio', 'ativo', 'ordem']
         help_texts = {
-            'obrigatorio': 'Sem ele o aluno não recebe o selo "Cadastro completo".',
+            'obrigatorio': 'Sem ele o atendido não recebe o selo "Cadastro completo".',
             'ativo': 'Desativado: some do envio e deixa de ser exigido, mas os arquivos já enviados continuam.',
         }

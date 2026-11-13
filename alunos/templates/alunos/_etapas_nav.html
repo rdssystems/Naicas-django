@@ -1,4 +1,4 @@
-{% comment %}Progresso do cadastro. Precisa de: aluno (ou None no cadastro novo) e etapa_atual.{% endcomment %}
+{% comment %}Progresso do cadastro. Precisa de: atendido (ou None no cadastro novo) e etapa_atual.{% endcomment %}
 <nav class="mb-4" aria-label="Etapas do cadastro">
     <ol class="list-unstyled d-flex flex-wrap gap-2 mb-0">
     {% if aluno %}
@@ -14,12 +14,12 @@
         </li>
         {% endfor %}
     {% else %}
-        <li><span class="btn btn-sm btn-primary">1. Dados do aluno</span></li>
+        <li><span class="btn btn-sm btn-primary">1. Dados do atendido</span></li>
         <li><span class="btn btn-sm btn-outline-secondary disabled">2. Responsável</span></li>
         <li><span class="btn btn-sm btn-outline-secondary disabled">3. Família e emergência</span></li>
         <li><span class="btn btn-sm btn-outline-secondary disabled">4. Saúde</span></li>
         <li><span class="btn btn-sm btn-outline-secondary disabled">5. Anexos</span></li>
-        <li><span class="btn btn-sm btn-outline-secondary disabled">6. Matrícula</span></li>
+        <li><span class="btn btn-sm btn-outline-secondary disabled">6. Cronograma</span></li>
     {% endif %}
     </ol>
 </nav>

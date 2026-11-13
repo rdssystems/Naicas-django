@@ -49,9 +49,9 @@ class CoordenadorUnidadeRequiredMixin(PerfilRequiredMixin):
 
 class MonitorRequiredMixin(PerfilRequiredMixin):
     """
-    Views de frequência/lista de matriculados de UMA oficina. A view define
+    Consulta do cronograma de UMA oficina. A view define
     get_oficina(); passa Diretor, Coordenador da unidade da oficina e Monitor
-    designado nela. Nunca usar em cadastro/edição de aluno, oficina ou usuário.
+    designado nela. Nunca usar em cadastro/edição de atendido, oficina ou usuário.
     """
 
     def get_oficina(self):

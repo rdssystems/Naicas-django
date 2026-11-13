@@ -18,6 +18,7 @@
     --naicas-papel: #f3f4f8;
     --naicas-grafite: #1e2230;
     --naicas-linha: #dfe2ec;
+    --naicas-sombra: 0 1px 2px rgba(30, 34, 48, 0.06), 0 1px 1px rgba(30, 34, 48, 0.04);
     --naicas-fita: #eadcae;
     --naicas-fita-texto: #4a3b17;
     /* Cargos (etiqueta na barra): tons claros, legíveis sobre o anil */
@@ -125,7 +126,9 @@ h6.text-uppercase, .h6.text-uppercase {
     background: var(--naicas-anil);
     box-shadow: inset 0 -3px 0 var(--naicas-anil-escuro);
 }
-.navbar-naicas .navbar-brand { padding-block: 0.25rem; margin-right: 1.5rem; }
+.navbar-naicas > .container-fluid { justify-content: flex-start; flex-wrap: nowrap; gap: 1rem; }
+.navbar-naicas .navbar-brand { flex: 1; min-width: 0; padding-block: 0.25rem; margin-right: 0; }
+.navbar-naicas .navbar-brand .fita { max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 .navbar-naicas .navbar-brand:hover .fita,
 .navbar-naicas .navbar-brand:focus-visible .fita { transform: rotate(0deg); }
 .navbar-naicas {
@@ -134,6 +137,99 @@ h6.text-uppercase, .h6.text-uppercase {
     --bs-navbar-active-color: #ffffff;
 }
 .navbar-naicas .nav-link { font-weight: 500; }
+.menu-desktop { display: none; }
+.menu-desktop .navbar-nav { flex-direction: row; align-items: center; flex-wrap: nowrap; gap: .15rem; }
+.menu-desktop .nav-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding: .5rem .6rem;
+    border: 0;
+    border-radius: .4rem;
+    background: transparent;
+    color: var(--bs-navbar-color);
+    font-size: .875rem;
+    white-space: nowrap;
+}
+.menu-desktop .nav-link:hover, .menu-desktop .nav-link:focus-visible,
+.menu-desktop .nav-link.active, .menu-desktop .nav-link.show { color: #fff; background: rgba(255,255,255,.12); }
+.menu-desktop .dropdown-menu { position: absolute; margin-top: .5rem; }
+.menu-desktop .dropdown-item { padding: .65rem 1rem; }
+.menu-desktop-unidades { max-height: min(32rem, calc(100dvh - 6rem)); max-width: calc(100vw - 2rem); overflow-y: auto; }
+.menu-desktop-unidades .dropdown-item { white-space: normal; }
+.menu-conta { gap: .6rem; }
+.menu-conta-nome { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; }
+
+/* Breakpoint lg original do Bootstrap, sincronizado com navegacao.js. */
+@media (min-width: 992px) {
+    .navbar-naicas .botao-menu { display: none; }
+    .navbar-naicas .navbar-brand { flex: 0 1 auto; max-width: 10rem; }
+    .menu-desktop { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; }
+}
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .navbar-naicas > .container-fluid { column-gap: .75rem !important; }
+    .menu-desktop { gap: .5rem; }
+    .menu-desktop .nav-link { padding-inline: .4rem; font-size: .8rem; }
+    .menu-desktop .navbar-nav { gap: 0; }
+    .menu-desktop .menu-conta { gap: .35rem; }
+    .menu-conta-nome { max-width: 5rem; }
+    .navbar-naicas .navbar-brand { max-width: 7rem; }
+}
+
+/* Navegação por toque, tanto em retrato quanto em paisagem. */
+.botao-menu, .btn.acao-retorno, .menu-fechar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    min-height: 48px;
+    min-width: 48px;
+    padding: .65rem 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    touch-action: manipulation;
+}
+.navbar-naicas .botao-menu {
+    flex-shrink: 0;
+    --bs-btn-color: #fff;
+    --bs-btn-border-color: rgba(255,255,255,.55);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: rgba(255,255,255,.14);
+    --bs-btn-hover-border-color: #fff;
+    color: #fff;
+    border-color: rgba(255,255,255,.55);
+}
+.botao-menu:hover, .botao-menu:focus-visible { color: #fff; background: rgba(255,255,255,.14); border-color: #fff; }
+.botao-menu .bi { font-size: 1.5rem; line-height: 1; }
+.barra-retorno .acao-retorno { background: #fff; min-width: 7rem; }
+.barra-retorno .acao-retorno:hover { background: var(--naicas-anil); }
+.menu-lateral {
+    --bs-offcanvas-width: min(23rem, calc(100vw - 1.5rem));
+    background: var(--naicas-papel);
+    border: 0;
+    box-shadow: 8px 0 32px rgba(30,34,48,.18);
+}
+.menu-lateral .offcanvas-header { padding: 1rem 1.25rem; background: var(--naicas-anil); color: #fff; }
+.menu-lateral .offcanvas-title { color: inherit; }
+.menu-fechar { color: #fff; padding: .65rem; border-color: rgba(255,255,255,.55); }
+.menu-fechar:hover, .menu-fechar:focus-visible { color: #fff; background: rgba(255,255,255,.14); border-color: #fff; }
+.menu-lateral .offcanvas-body { padding: 0 1rem; overscroll-behavior: contain; }
+.menu-identificacao { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; padding: 1.25rem .5rem; overflow-wrap: anywhere; }
+.menu-usuario { font-size: 1rem; font-weight: 600; }
+.menu-secao { padding: 1rem 0; border-top: 1px solid var(--naicas-linha); }
+.menu-titulo { margin: 0 .75rem .6rem; font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--bs-secondary-color); }
+.menu-links { gap: .25rem; }
+.menu-links .nav-link { display: flex; align-items: center; min-height: 48px; padding: .75rem; border-radius: .6rem; color: var(--naicas-grafite); font-size: 1rem; font-weight: 500; }
+.menu-links .nav-link:hover, .menu-links .nav-link:focus-visible { color: var(--naicas-anil); background: #fff; }
+.menu-links .nav-link.active { color: var(--naicas-anil-escuro); background: var(--naicas-anil-claro); font-weight: 600; }
+.menu-lateral .btn, .menu-lateral .form-select, .menu-admin { min-height: 48px; font-size: 1rem; }
+.menu-admin { display: flex; align-items: center; gap: .5rem; padding: .75rem; }
+.menu-rodape { padding: 1rem; padding-bottom: max(1rem, env(safe-area-inset-bottom)); border-top: 1px solid var(--naicas-linha); background: #fff; }
+.offcanvas-backdrop { --bs-backdrop-bg: var(--naicas-grafite); --bs-backdrop-opacity: .48; }
+@media (max-width: 575.98px) {
+    .navbar-naicas .container-fluid { column-gap: .75rem !important; }
+    .navbar-naicas .fita { padding-inline: .6rem; font-size: 1rem; }
+}
 
 /* Nome do usuário + etiqueta do cargo, empilhados */
 .usuario-nav {
@@ -164,11 +260,62 @@ h6.text-uppercase, .h6.text-uppercase {
 }
 
 /* ---------- Componentes ---------- */
+.cabecalho-pagina {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.75rem;
+    border-radius: var(--bs-border-radius-lg);
+    color: #fff;
+    background: linear-gradient(115deg, var(--naicas-anil), var(--naicas-anil-escuro));
+    box-shadow: var(--naicas-sombra);
+}
+.cabecalho-pagina h1 { color: inherit; margin-bottom: 0; overflow-wrap: anywhere; }
+.cabecalho-pagina > div { min-width: 0; }
+.cabecalho-pagina > .d-flex { flex-wrap: wrap; }
+.cabecalho-pagina .text-muted { color: #e4e7f7 !important; }
+.cabecalho-pagina form { margin-bottom: 0; }
+.cabecalho-pagina .btn-primary {
+    --bs-btn-color: var(--naicas-anil);
+    --bs-btn-bg: #fff;
+    --bs-btn-border-color: #fff;
+    --bs-btn-hover-color: var(--naicas-anil-escuro);
+    --bs-btn-hover-bg: var(--naicas-anil-claro);
+    --bs-btn-hover-border-color: var(--naicas-anil-claro);
+    --bs-btn-active-color: var(--naicas-anil-escuro);
+    --bs-btn-active-bg: var(--naicas-anil-claro);
+    --bs-btn-active-border-color: var(--naicas-anil-claro);
+}
+.cabecalho-pagina .btn-outline-primary,
+.cabecalho-pagina .btn-outline-secondary {
+    --bs-btn-color: #fff;
+    --bs-btn-border-color: rgba(255, 255, 255, .7);
+    --bs-btn-hover-color: var(--naicas-anil);
+    --bs-btn-hover-bg: #fff;
+    --bs-btn-hover-border-color: #fff;
+    --bs-btn-active-color: var(--naicas-anil);
+    --bs-btn-active-bg: var(--naicas-anil-claro);
+    --bs-btn-active-border-color: var(--naicas-anil-claro);
+}
+.cabecalho-pagina .btn-outline-danger { --bs-btn-color: #fff; --bs-btn-bg: var(--naicas-urucum); }
+.cabecalho-pagina :focus-visible { outline-color: var(--naicas-ipe); }
+.filtros-pagina {
+    padding: 1.15rem;
+    margin-inline: 0;
+    border: 1px solid var(--naicas-linha);
+    border-radius: var(--bs-border-radius-lg);
+    background: #fff;
+    box-shadow: var(--naicas-sombra);
+}
 .card {
     --bs-card-border-color: var(--naicas-linha);
     --bs-card-border-radius: 0.75rem;
 }
-.shadow-sm { box-shadow: 0 1px 2px rgba(30, 34, 48, 0.06), 0 1px 1px rgba(30, 34, 48, 0.04) !important; }
+.shadow-sm { box-shadow: var(--naicas-sombra) !important; }
+.card-header { padding: .9rem 1.25rem; background: #fff; }
+.card-body { padding: 1.25rem; }
 
 /* Cards de atalho do painel */
 a.card { transition: border-color 0.15s ease, transform 0.15s ease; }
@@ -176,10 +323,12 @@ a.card:hover { border-color: var(--naicas-anil); transform: translateY(-2px); }
 a.card .bi { color: var(--naicas-anil); }
 
 .table { --bs-table-bg: transparent; }
+.table > :not(caption) > * > * { padding: .8rem 1rem; }
 .table-light { --bs-table-bg: #f7f8fb; --bs-table-color: var(--bs-secondary-color); }
 .table > thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
 
-.btn { font-weight: 500; }
+.btn { font-weight: 500; min-height: 2.25rem; }
+.btn-sm { min-height: 2rem; }
 .btn-primary {
     --bs-btn-bg: var(--naicas-anil);
     --bs-btn-border-color: var(--naicas-anil);
@@ -284,15 +433,16 @@ a.card .bi { color: var(--naicas-anil); }
 /* ---------- Agenda da escala (dias em colunas, horas descendo) ---------- */
 .agenda-rolagem { overflow-x: auto; }
 .agenda {
-    --agenda-hora-altura: 3.5rem;
+    --agenda-hora-altura: 7.5rem;
+    --agenda-eixo-largura: 3.5rem;
     display: grid;
-    grid-template-columns: 3.5rem repeat(var(--agenda-dias), minmax(8.5rem, 1fr));
+    grid-template-columns: var(--agenda-eixo-largura) var(--agenda-colunas, repeat(var(--agenda-dias), minmax(13rem, 1fr)));
     grid-template-rows: auto calc(var(--agenda-horas) * var(--agenda-hora-altura));
     min-width: min-content;
 }
 @media (max-width: 575.98px) {
     /* no celular a agenda rola de lado: colunas largas o bastante para blocos lado a lado */
-    .agenda { grid-template-columns: 3rem repeat(var(--agenda-dias), 11rem); }
+    .agenda { --agenda-eixo-largura: 3rem; }
 }
 .agenda-canto, .agenda-titulo {
     position: sticky;
@@ -340,10 +490,11 @@ a.card .bi { color: var(--naicas-anil); }
     position: absolute;
     box-sizing: border-box;
     isolation: isolate; /* o ::before (cartão) fica atrás do texto */
-    padding: 0.35rem 0.4rem 0.35rem 0.6rem;
+    padding: 0.5rem 0.65rem;
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    gap: 0.15rem;
+    min-width: 0;
     overflow: hidden;
     text-decoration: none;
     color: var(--naicas-grafite);
@@ -360,16 +511,30 @@ a.card .bi { color: var(--naicas-anil); }
 }
 .agenda-bloco:hover::before, .agenda-bloco:focus-visible::before { background: #d8ddf2; }
 .agenda-bloco-nome {
+    flex: 0 0 auto;
+    min-width: 0;
     font-weight: 600;
     font-size: 0.82rem;
     line-height: 1.2;
     color: var(--naicas-anil-escuro);
-    /* nome não quebra no meio da palavra: corta com reticências (o title mostra inteiro) */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.agenda-bloco-info {
+    flex: 0 0 auto;
+    min-width: 0;
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.agenda-bloco-info { font-size: 0.72rem; color: var(--bs-secondary-color); line-height: 1.2; }
+.agenda-bloco-horario { font-variant-numeric: tabular-nums; }
 .agenda-bloco-monitores { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.15rem; }
 .agenda-bloco-monitores span {
     font-size: 0.68rem;
@@ -414,7 +579,7 @@ a.indicador:hover { border-color: var(--naicas-anil); }
 .grafico-frequencia { position: relative; min-width: 34rem; }
 .grafico-frequencia svg { display: block; width: 100%; height: auto; overflow: visible; }
 .grafico-frequencia .grade { stroke: var(--naicas-linha); stroke-width: 1; }
-.grafico-frequencia .meta { stroke: var(--bs-secondary-color); stroke-width: 1; stroke-dasharray: 4 4; }
+.grafico-frequencia .referencia-frequencia { stroke: var(--bs-secondary-color); stroke-width: 1; stroke-dasharray: 4 4; }
 .grafico-frequencia .eixo { font-size: 11px; fill: var(--bs-secondary-color); }
 .grafico-frequencia .linha { fill: none; stroke: var(--naicas-anil); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .grafico-frequencia .ponto { fill: var(--naicas-anil); stroke: #fff; stroke-width: 2; }
@@ -442,4 +607,13 @@ a.indicador:hover { border-color: var(--naicas-anil); }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
     a.card:hover { transform: none; }
+}
+
+@media (max-width: 575.98px) {
+    .cabecalho-pagina { padding: 1.25rem; }
+    .cabecalho-pagina > .btn,
+    .cabecalho-pagina > .d-flex { max-width: 100%; }
+    .filtros-pagina { padding: .75rem; }
+    .card-body { padding: 1rem; }
+    .btn, .btn-sm { min-height: 2.75rem; }
 }

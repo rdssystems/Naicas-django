@@ -1,0 +1,12 @@
+{% extends "core/base.html" %}
+{% block title %}{% if atividade %}Editar horário{% else %}Vincular oficina{% endif %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-7">
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">{% if atividade %}Editar horário{% else %}Vincular oficina ao cronograma{% endif %}</h1></header>
+<p class="small text-muted">Escolha a oficina, informe o instrutor, as turmas e o horário semanal. Você pode alterar essa programação a qualquer momento.</p>
+<div class="card shadow-sm"><div class="card-body"><form method="post" novalidate>
+{% csrf_token %}{% if active_escola %}<p class="small">Unidade: <strong>{{ active_escola }}</strong></p>{% endif %}
+{% include "core/_form_campos.html" with form=form %}
+<div class="d-flex justify-content-end gap-2"><a href="{% url 'escalas:grade' %}" class="btn btn-outline-secondary">Cancelar</a><button type="submit" class="btn btn-primary">Salvar cronograma</button></div>
+</form></div></div></div></div>
+{% endblock %}

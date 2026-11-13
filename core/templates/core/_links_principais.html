@@ -1,0 +1,9 @@
+{% if is_diretor or is_coordenador %}
+<li class="nav-item"><a class="nav-link{% if request.resolver_match.namespace == 'dashboard' %} active{% endif %}" href="{% url 'dashboard:painel' %}"{% if request.resolver_match.namespace == 'dashboard' %} aria-current="page"{% endif %}>Visão Geral</a></li>
+{% endif %}
+<li class="nav-item"><a class="nav-link{% if request.resolver_match.namespace == 'core' %} active{% endif %}" href="{% url 'core:home' %}"{% if request.resolver_match.namespace == 'core' %} aria-current="page"{% endif %}>Início</a></li>
+<li class="nav-item"><a class="nav-link{% if request.resolver_match.namespace == 'oficinas' %} active{% endif %}" href="{% url 'oficinas:lista' %}"{% if request.resolver_match.namespace == 'oficinas' %} aria-current="page"{% endif %}>{% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</a></li>
+<li class="nav-item"><a class="nav-link{% if request.resolver_match.namespace == 'escalas' %} active{% endif %}" href="{% url 'escalas:grade' %}"{% if request.resolver_match.namespace == 'escalas' %} aria-current="page"{% endif %}>Cronograma</a></li>
+{% if is_diretor or is_coordenador %}
+<li class="nav-item"><a class="nav-link{% if request.resolver_match.namespace == 'alunos' %} active{% endif %}" href="{% url 'alunos:lista' %}"{% if request.resolver_match.namespace == 'alunos' %} aria-current="page"{% endif %}>Atendidos</a></li>
+{% endif %}

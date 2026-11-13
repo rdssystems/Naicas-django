@@ -5,10 +5,28 @@ from core.forms import DigitosField, MoedaField, sim_nao_field
 from escolas.models import EscolaNaica
 
 from .models import (
-    Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, FichaSaude, MembroFamiliar, Parentesco, Responsavel,
+    Aluno, AlunoResponsavel, ContatoEmergencia, Endereco, FichaSaude, MembroFamiliar, Ocorrencia,
+    Parentesco, Responsavel,
 )
 
 DATA = forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')
+
+
+class StatusAlunoForm(forms.Form):
+    status = forms.ChoiceField(choices=[(Aluno.Status.INATIVO, Aluno.Status.INATIVO.label)])
+
+
+class OcorrenciaForm(forms.ModelForm):
+    class Meta:
+        model = Ocorrencia
+        fields = ['descricao']
+        widgets = {
+            'descricao': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descreva o problema ou a situação observada.',
+            }),
+        }
 
 
 class AlunoForm(forms.ModelForm):
@@ -18,7 +36,7 @@ class AlunoForm(forms.ModelForm):
     class Meta:
         model = Aluno
         fields = [
-            'escola', 'cpf', 'nome', 'nome_mae', 'data_nascimento', 'sexo',
+            'escola', 'turno', 'turma', 'cpf', 'nome', 'nome_mae', 'data_nascimento', 'sexo',
             'naturalidade', 'nis', 'nome_escola', 'ano_escolar',
         ]
         widgets = {'data_nascimento': DATA}
@@ -26,6 +44,8 @@ class AlunoForm(forms.ModelForm):
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        self.fields['turno'].required = True
+        self.fields['turma'].required = True
         # Preenchido quando o CPF já existe; a view usa para mostrar o link
         # (se o usuário enxerga o aluno) ou só o aviso (se é de outra unidade).
         self.aluno_existente = None
@@ -35,7 +55,7 @@ class AlunoForm(forms.ModelForm):
                 self.instance.escola = acesso.escola_do_usuario(user)
         else:
             self.fields['escola'].queryset = EscolaNaica.objects.all()
-            self.fields['escola'].help_text = 'Unidade responsável pelo cadastro deste aluno.'
+            self.fields['escola'].help_text = 'Unidade responsável pelo cadastro deste atendido.'
             if not self.instance.pk and (foco := acesso.escola_em_foco(user)):
                 self.initial.setdefault('escola', foco.pk)
 
@@ -49,8 +69,8 @@ class AlunoForm(forms.ModelForm):
             if Aluno.objects.visiveis_para(self.user).filter(pk=existente.pk).exists():
                 raise forms.ValidationError('Este CPF já está cadastrado.')
             raise forms.ValidationError(
-                f'Este aluno já está cadastrado na unidade {existente.escola}. '
-                'Ele pode ser matriculado numa oficina da sua unidade pelo módulo de Matrículas.'
+                f'Este atendido já está cadastrado na unidade {existente.escola}. '
+                'Cada atendido pertence a uma única Naica e não pode ser transferido por uma matrícula.'
             )
         return cpf
 
@@ -65,7 +85,7 @@ class EnderecoForm(forms.ModelForm):
 
 class ResponsavelForm(forms.ModelForm):
     """
-    Dados do responsável + grau de parentesco com ESTE aluno.
+    Dados do responsável + grau de parentesco com ESTE atendido.
     Se o CPF já existe na rede, a view passa o cadastro existente como
     instance: salvar atualiza o mesmo responsável (não duplica).
     """
@@ -98,7 +118,7 @@ class ResponsavelForm(forms.ModelForm):
         cleaned = super().clean()
         if self.vinculo is None and self.instance.pk:
             if AlunoResponsavel.objects.filter(aluno=self.aluno, responsavel=self.instance).exists():
-                raise forms.ValidationError('Este responsável já está vinculado ao aluno.')
+                raise forms.ValidationError('Este responsável já está vinculado ao atendido.')
         return cleaned
 
     def save(self, commit=True):

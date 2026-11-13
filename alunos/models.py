@@ -58,12 +58,15 @@ class Parentesco(models.TextChoices):
 
 
 class AlunoQuerySet(models.QuerySet):
+    def ativos(self):
+        return self.filter(status=Aluno.Status.ATIVO)
+
     def visiveis_para(self, user):
         """
         Diretor: todos (ou os da unidade em foco). Coordenador: cadastrados na unidade dele + critérios
         registrados por outros apps (ex.: matriculados em oficinas dela, ver
         alunos/visibilidade.py). Monitor: nenhum — ele não acessa o cadastro,
-        só a lista de matriculados das oficinas dele.
+        só consulta o cronograma das oficinas do seu escopo legado.
         """
         if acesso.is_diretor(user):
             foco = acesso.escola_em_foco(user)
@@ -83,6 +86,19 @@ class AlunoQuerySet(models.QuerySet):
 
 
 class Aluno(models.Model):
+    class Status(models.TextChoices):
+        ATIVO = 'ATIVO', 'Ativo'
+        INATIVO = 'INATIVO', 'Inativo'
+
+    class Turno(models.TextChoices):
+        MANHA = 'MANHA', 'Manhã'
+        TARDE = 'TARDE', 'Tarde'
+
+    class Turma(models.TextChoices):
+        A = 'A', 'Turma A'
+        B = 'B', 'Turma B'
+        C = 'C', 'Turma C'
+
     class Sexo(models.TextChoices):
         FEMININO = 'F', 'Feminino'
         MASCULINO = 'M', 'Masculino'
@@ -110,6 +126,11 @@ class Aluno(models.Model):
         'escolas.EscolaNaica', verbose_name='unidade de cadastro',
         on_delete=models.PROTECT, related_name='alunos',
     )
+    # Classificação local do aluno. Nulos preservam cadastros antigos até
+    # que a coordenação informe os dados corretos.
+    turno = models.CharField('turno', max_length=5, choices=Turno.choices, null=True, blank=True)
+    turma = models.CharField('turma', max_length=1, choices=Turma.choices, null=True, blank=True)
+    status = models.CharField('status', max_length=9, choices=Status.choices, default=Status.ATIVO, db_index=True)
     # Identificação
     cpf = models.CharField('CPF', max_length=11, unique=True, validators=[validar_cpf])
     nome = models.CharField('nome completo', max_length=150)
@@ -132,8 +153,8 @@ class Aluno(models.Model):
     objects = AlunoQuerySet.as_manager()
 
     class Meta:
-        verbose_name = 'aluno'
-        verbose_name_plural = 'alunos'
+        verbose_name = 'atendido'
+        verbose_name_plural = 'atendidos'
         ordering = ['nome']
 
     def __str__(self):
@@ -147,7 +168,7 @@ class Aluno(models.Model):
 
     def vinculos_fora_da_familia(self):
         """
-        Responsáveis do aluno que ainda não estão na composição familiar.
+        Responsáveis do atendido que ainda não estão na composição familiar.
         Compara pelo vínculo (linha pré-preenchida) e também pelo nome, para
         não duplicar quem foi digitado à mão.
         """
@@ -170,7 +191,7 @@ class Aluno(models.Model):
 
 
 class Endereco(models.Model):
-    aluno = models.OneToOneField(Aluno, on_delete=models.CASCADE, related_name='endereco')
+    aluno = models.OneToOneField(Aluno, verbose_name='atendido', on_delete=models.CASCADE, related_name='endereco')
     cep = models.CharField('CEP', max_length=8, validators=[validar_cep])
     logradouro = models.CharField('logradouro', max_length=200)
     numero = models.CharField('número', max_length=20, blank=True, help_text='Deixe vazio se for S/N.')
@@ -189,7 +210,7 @@ class Endereco(models.Model):
 
 
 class Responsavel(models.Model):
-    """Entidade da rede, reaproveitada pelo CPF entre alunos (irmãos) e unidades."""
+    """Entidade da rede, reaproveitada pelo CPF entre atendidos (irmãos) e unidades."""
 
     cpf = models.CharField('CPF', max_length=11, unique=True, validators=[validar_cpf])
     nome = models.CharField('nome completo', max_length=150)
@@ -246,13 +267,13 @@ class Responsavel(models.Model):
 
 
 class AlunoResponsavel(models.Model):
-    aluno = models.ForeignKey(Aluno, on_delete=models.CASCADE, related_name='responsaveis_vinculos')
+    aluno = models.ForeignKey(Aluno, verbose_name='atendido', on_delete=models.CASCADE, related_name='responsaveis_vinculos')
     responsavel = models.ForeignKey(Responsavel, on_delete=models.PROTECT, related_name='alunos_vinculos')
     grau_parentesco = models.CharField('grau de parentesco', max_length=20, choices=Parentesco.choices)
 
     class Meta:
-        verbose_name = 'vínculo aluno-responsável'
-        verbose_name_plural = 'vínculos aluno-responsável'
+        verbose_name = 'vínculo atendido-responsável'
+        verbose_name_plural = 'vínculos atendido-responsável'
         constraints = [
             models.UniqueConstraint(fields=['aluno', 'responsavel'], name='aluno_responsavel_unico'),
         ]
@@ -262,7 +283,7 @@ class AlunoResponsavel(models.Model):
 
 
 class MembroFamiliar(models.Model):
-    aluno = models.ForeignKey(Aluno, on_delete=models.CASCADE, related_name='membros_familia')
+    aluno = models.ForeignKey(Aluno, verbose_name='atendido', on_delete=models.CASCADE, related_name='membros_familia')
     # Preenchido quando a linha veio de um responsável do aluno (pré-preenchimento
     # da etapa 3): é como o sistema sabe quem já está na composição familiar.
     responsavel = models.ForeignKey(
@@ -288,7 +309,7 @@ class MembroFamiliar(models.Model):
 
 
 class ContatoEmergencia(models.Model):
-    aluno = models.ForeignKey(Aluno, on_delete=models.CASCADE, related_name='contatos_emergencia')
+    aluno = models.ForeignKey(Aluno, verbose_name='atendido', on_delete=models.CASCADE, related_name='contatos_emergencia')
     nome = models.CharField('nome', max_length=150)
     parentesco = models.CharField('parentesco', max_length=20, choices=Parentesco.choices)
     celular = models.CharField('celular', max_length=20)
@@ -313,7 +334,7 @@ class FichaSaude(models.Model):
         PLANO = 'PLANO', 'Plano de saúde'
         AMBOS = 'AMBOS', 'SUS e plano de saúde'
 
-    aluno = models.OneToOneField(Aluno, on_delete=models.CASCADE, related_name='ficha_saude')
+    aluno = models.OneToOneField(Aluno, verbose_name='atendido', on_delete=models.CASCADE, related_name='ficha_saude')
     # Assistência médica
     tipo_assistencia = models.CharField('assistência médica', max_length=10, choices=Assistencia.choices)
     plano_saude = models.CharField('qual(is) plano(s)', max_length=150, blank=True)
@@ -361,3 +382,23 @@ class FichaSaude(models.Model):
         if not self.usa_medicacao_controlada:
             self.medicacao = self.medicacao_ha_quanto_tempo = self.medicacao_reacoes = ''
         super().save(*args, **kwargs)
+
+
+class Ocorrencia(models.Model):
+    """Registro append-only de uma ocorrência vinculada à ficha do atendido."""
+
+    aluno = models.ForeignKey(Aluno, verbose_name='atendido', on_delete=models.CASCADE, related_name='ocorrencias')
+    data = models.DateField('data', auto_now_add=True)
+    descricao = models.TextField('descrição')
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name='registrado por', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+',
+    )
+
+    class Meta:
+        verbose_name = 'ocorrência'
+        verbose_name_plural = 'ocorrências'
+        ordering = ['data', 'pk']
+
+    def __str__(self):
+        return f'Ocorrência de {self.aluno} em {self.data:%d/%m/%Y}'

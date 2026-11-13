@@ -1,3 +1,0 @@
-{% if matricula.status == 'CURSANDO' %}<span class="badge text-bg-success">Cursando</span>
-{% elif matricula.status == 'CONCLUIDO' %}<span class="badge text-bg-secondary">Concluído {{ matricula.data_conclusao|date:"d/m/Y" }}</span>
-{% else %}<span class="badge text-bg-light border">Desistente {{ matricula.data_desistencia|date:"d/m/Y" }}</span>{% endif %}

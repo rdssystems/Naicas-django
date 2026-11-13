@@ -4,14 +4,23 @@
 {% block title %}{{ aluno.nome }}{% endblock %}
 
 {% block content %}
-<a href="{% url 'alunos:lista' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Alunos</a>
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mt-2 mb-3">
+<div class="cabecalho-pagina d-flex flex-wrap justify-content-between align-items-start gap-2 mt-2 mb-4">
     <div>
         <h1 class="h4 mb-1">{{ aluno.nome }}
             {% if aluno.cadastro_completo %}<span class="badge text-bg-success fs-6 align-middle">Cadastro completo</span>
             {% else %}<span class="badge text-bg-warning fs-6 align-middle">Cadastro incompleto</span>{% endif %}
         </h1>
         <div class="text-muted">CPF {{ aluno.cpf|cpf }} · Unidade de cadastro: {{ aluno.escola }}</div>
+        <div class="small mt-2">Status: {% include "alunos/_status_badge.html" %}</div>
+    </div>
+    <div>
+        {% if aluno.status == 'ATIVO' %}
+        <form method="post" action="{% url 'alunos:alterar_status' aluno.pk %}" aria-label="Inativar atendido">
+            {% csrf_token %}
+            <button type="submit" name="status" value="INATIVO" class="btn btn-outline-secondary">Inativar atendido</button>
+        </form>
+        {% endif %}
+        <p class="small text-muted mt-2 mb-0">Inativos ficam fora da contagem geral.<br>A ficha e o histórico são preservados.</p>
     </div>
 </div>
 
@@ -22,13 +31,15 @@
         <div class="card shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h6 text-uppercase text-muted mb-0">1. Dados do aluno</h2>
+                    <h2 class="h6 text-uppercase text-muted mb-0">1. Dados do atendido</h2>
                     <a href="{% url 'alunos:etapa_dados' aluno.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a>
                 </div>
                 <dl class="row mb-0 small">
                     <dt class="col-5">Nome da mãe</dt><dd class="col-7">{{ aluno.nome_mae }}</dd>
                     <dt class="col-5">Nascimento</dt><dd class="col-7">{{ aluno.data_nascimento|date:"d/m/Y" }}</dd>
                     <dt class="col-5">Sexo</dt><dd class="col-7">{{ aluno.get_sexo_display }}</dd>
+                    <dt class="col-5">Turno</dt><dd class="col-7">{% if aluno.turno %}{{ aluno.get_turno_display }}{% else %}<span class="text-danger">Pendente</span>{% endif %}</dd>
+                    <dt class="col-5">Turma</dt><dd class="col-7">{% if aluno.turma %}{{ aluno.get_turma_display }}{% else %}<span class="text-danger">Pendente</span>{% endif %}</dd>
                     <dt class="col-5">Naturalidade</dt><dd class="col-7">{{ aluno.naturalidade }}</dd>
                     <dt class="col-5">NIS</dt><dd class="col-7">{{ aluno.nis|default:"—" }}</dd>
                     <dt class="col-5">Escola</dt><dd class="col-7">{{ aluno.nome_escola }}</dd>
@@ -131,5 +142,34 @@
         </div>
     </div>
     {% endif %}
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-muted mb-3">5. Ocorrências</h2>
+                <form method="post" class="mb-4">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label for="{{ ocorrencia_form.descricao.id_for_label }}" class="form-label">Nova ocorrência</label>
+                        {{ ocorrencia_form.descricao }}
+                        {% for error in ocorrencia_form.descricao.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle"></i> Registrar ocorrência</button>
+                </form>
+                <div class="list-group list-group-flush">
+                    {% for ocorrencia in ocorrencias %}
+                    <article class="list-group-item px-0">
+                        <div class="d-flex flex-wrap justify-content-between gap-1 small text-muted mb-1">
+                            <time datetime="{{ ocorrencia.data|date:'Y-m-d' }}">{{ ocorrencia.data|date:"d/m/Y" }}</time>
+                            <span>Registrado por {{ ocorrencia.autor.get_full_name|default:ocorrencia.autor|default:"Usuário removido" }}</span>
+                        </div>
+                        <div>{{ ocorrencia.descricao|linebreaksbr }}</div>
+                    </article>
+                    {% empty %}
+                    <p class="small text-muted mb-0">Nenhuma ocorrência registrada.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

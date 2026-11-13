@@ -1,13 +1,13 @@
 """
-Gera alunos FICTÍCIOS para desenvolvimento/demonstração, com as etapas 1 a 5
+Gera atendidos FICTÍCIOS para desenvolvimento/demonstração, com as etapas 1 a 5
 preenchidas (dados, endereço, responsáveis, família, contatos de emergência,
 saúde e, via popular_anexos, PDFs fictícios dos documentos obrigatórios).
 
-Parte dos alunos é de irmãos que compartilham a mesma mãe, para exercitar o
+Parte dos atendidos é de irmãos que compartilham a mesma mãe, para exercitar o
 reaproveitamento do responsável pelo CPF. Nunca rodar em produção.
 
 Uso:
-    python manage.py popular_alunos                     # 10 alunos na única unidade
+    python manage.py popular_alunos                     # 10 atendidos na única unidade
     python manage.py popular_alunos --quantidade 20 --escola naica-canaa --seed 42
 """
 
@@ -21,6 +21,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from alunos.models import Aluno
 from escolas.models import EscolaNaica
 
 from ...models import (
@@ -85,7 +86,7 @@ def ano_escolar_pela_idade(idade):
 
 
 class Command(BaseCommand):
-    help = 'Cria alunos fictícios (cadastro completo) para desenvolvimento.'
+    help = 'Cria atendidos fictícios (cadastro completo) para desenvolvimento.'
 
     def add_arguments(self, parser):
         parser.add_argument('--quantidade', type=int, default=10)
@@ -112,7 +113,7 @@ class Command(BaseCommand):
 
         for aluno in criados:
             self.stdout.write(f'  {aluno.nome} ({aluno.get_ano_escolar_display()})')
-        self.stdout.write(self.style.SUCCESS(f'{len(criados)} alunos fictícios criados em {escola}.'))
+        self.stdout.write(self.style.SUCCESS(f'{len(criados)} atendidos fictícios criados em {escola}.'))
 
     def resolver_escola(self, slug):
         if slug:
@@ -201,6 +202,8 @@ class Command(BaseCommand):
             idade = (self.hoje - nascimento).days // 365
             aluno = Aluno.objects.create(
                 escola=escola,
+                turno=self.rng.choice(Aluno.Turno.values),
+                turma=self.rng.choice(Aluno.Turma.values),
                 cpf=gerar_cpf(self.rng, self.usados),
                 nome=self.nome(feminino, sobrenome),
                 nome_mae=mae.nome,

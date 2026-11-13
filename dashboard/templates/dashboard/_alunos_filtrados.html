@@ -1,0 +1,33 @@
+<section class="card shadow-sm mb-3" aria-labelledby="titulo-alunos-encontrados">
+    <div class="card-body pb-0">
+        <h2 class="h6 mb-1" id="titulo-alunos-encontrados">Atendidos encontrados <span class="badge text-bg-primary">{{ alunos_encontrados.paginator.count }}</span></h2>
+        <p class="small text-muted mb-3">Atendidos que atendem a todos os filtros selecionados.</p>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light"><tr><th>Atendido</th><th>Idade</th><th>Nascimento</th><th>Sexo</th><th>Unidade de cadastro</th></tr></thead>
+            <tbody>
+                {% for aluno in alunos_encontrados %}
+                <tr>
+                    <td><a href="{% url 'alunos:detalhe' aluno.pk %}" class="fw-semibold text-decoration-none">{{ aluno.nome }}</a></td>
+                    <td class="text-nowrap">{{ aluno.idade }} ano{{ aluno.idade|pluralize }}</td>
+                    <td class="text-nowrap">{{ aluno.data_nascimento|date:"d/m/Y" }}</td>
+                    <td>{{ aluno.get_sexo_display }}</td>
+                    <td>{{ aluno.escola.nome }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">Nenhum atendido encontrado com os filtros selecionados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if alunos_encontrados.has_other_pages %}
+    <nav class="card-body py-3" aria-label="Páginas de atendidos encontrados">
+        <ul class="pagination justify-content-center flex-wrap mb-0">
+            {% if alunos_encontrados.has_previous %}<li class="page-item"><a class="page-link" href="?{{ filtros_querystring }}&amp;page={{ alunos_encontrados.previous_page_number }}#titulo-alunos-encontrados">Anterior</a></li>{% endif %}
+            <li class="page-item disabled"><span class="page-link">{{ alunos_encontrados.number }} de {{ alunos_encontrados.paginator.num_pages }}</span></li>
+            {% if alunos_encontrados.has_next %}<li class="page-item"><a class="page-link" href="?{{ filtros_querystring }}&amp;page={{ alunos_encontrados.next_page_number }}#titulo-alunos-encontrados">Próxima</a></li>{% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</section>

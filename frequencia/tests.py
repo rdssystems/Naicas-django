@@ -1,187 +1,191 @@
 from datetime import timedelta
+from importlib import import_module
+from types import SimpleNamespace
 
+from django.apps import apps
+from django.db import connection, IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from alunos.models import Aluno
 from alunos.tests import criar_aluno, criar_usuario
 from core.acesso import NivelAcesso
+from escolas.foco import CHAVE_SESSAO
 from escolas.models import EscolaNaica
-from matriculas import regras as regras_matricula
 from matriculas.models import Matricula
-from oficinas.models import Oficina, TipoOficina
+from oficinas.tests import criar_tag
 from oficinas.tests import criar_oficina
-
-from . import regras
-from .models import Chamada, RegistroAula
+from .models import Chamada, ChamadaGeral, RegistroAula
 
 HOJE = timezone.localdate()
 
 
-def dia_da_semana_anterior(weekday, a_partir=HOJE):
-    """Última data (antes de `a_partir`) que cai no dia da semana dado."""
-    d = a_partir - timedelta(days=1)
-    while d.weekday() != weekday:
-        d -= timedelta(days=1)
-    return d
-
-
-class BaseFrequenciaTestCase(TestCase):
+class ChamadaGeralTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.escola_a = EscolaNaica.objects.create(nome='Naica Centro')
-        cls.escola_b = EscolaNaica.objects.create(nome='Naica Norte')
+        cls.a = EscolaNaica.objects.create(nome='Naica Alfa')
+        cls.b = EscolaNaica.objects.create(nome='Naica Beta')
         cls.diretor = criar_usuario('diretor', NivelAcesso.DIRETOR)
-        cls.coord_a = criar_usuario('coord_a', NivelAcesso.COORDENADOR, cls.escola_a)
-        cls.coord_b = criar_usuario('coord_b', NivelAcesso.COORDENADOR, cls.escola_b)
-        cls.monitor = criar_usuario('monitor', NivelAcesso.MONITOR)
-        cls.outro_monitor = criar_usuario('outro_monitor', NivelAcesso.MONITOR)
-        tipo = TipoOficina.objects.create(escola=cls.escola_a, nome='Dança')
-        cls.oficina = criar_oficina(
-            tipo, 'Dança', dias_semana=[0, 2, 4], data_inicio=HOJE - timedelta(days=90),
-            data_fim=HOJE + timedelta(days=90), vagas=10,
-        )
-        cls.oficina.monitores.add(cls.monitor)
-        cls.ana = criar_aluno(cls.escola_a, 900000001, 'Ana')
-        cls.bia = criar_aluno(cls.escola_a, 900000002, 'Bia')
-        cls.caio = criar_aluno(cls.escola_a, 900000003, 'Caio')
-        inicio = HOJE - timedelta(days=60)
-        for aluno in (cls.ana, cls.bia, cls.caio):
-            regras_matricula.matricular(aluno, cls.oficina, cls.coord_a)
-        # Matrículas "antigas" (data_inscricao é auto_now_add).
-        Matricula.objects.filter(oficina=cls.oficina).update(data_inscricao=inicio)
-        cls.seg = dia_da_semana_anterior(0)
-        cls.ter = dia_da_semana_anterior(1)
+        cls.coord = criar_usuario('coord', NivelAcesso.COORDENADOR, cls.a)
+        cls.monitor = criar_usuario('instrutor', NivelAcesso.MONITOR)
+        cls.ana = criar_aluno(cls.a, 900000001, 'Ana')
+        cls.bia = criar_aluno(cls.a, 900000002, 'Bia')
+        Aluno.objects.filter(pk=cls.bia.pk).update(turno='TARDE', turma='B')
+        cls.bia.refresh_from_db()
+        cls.caio = criar_aluno(cls.b, 900000003, 'Caio')
 
-    def m(self, aluno):
-        return Matricula.objects.get(aluno=aluno, oficina=self.oficina, status='CURSANDO')
+    def url(self):
+        return reverse('frequencia:chamada_naica')
 
-    def url_chamada(self, data=None):
-        url = reverse('frequencia:chamada', args=[self.oficina.pk])
-        return f'{url}?data={data.isoformat()}' if data else url
+    def dados(self, **extra):
+        return {'escola': self.a.pk, 'data': HOJE.isoformat(),
+                f'presenca_{self.ana.pk}': 'P', f'presenca_{self.bia.pk}': 'F', **extra}
 
-    def lancar(self, data, presencas, user=None, follow=False, **extra):
-        self.client.force_login(user or self.monitor)
-        dados = {'data': data.isoformat(), **extra}
-        for aluno, valor in presencas.items():
-            dados[f'presenca_{self.m(aluno).pk}'] = valor
-        return self.client.post(self.url_chamada(), dados, follow=follow)
-
-
-class ValidacaoDataTests(BaseFrequenciaTestCase):
-    def test_regras_de_data(self):
-        self.assertIsNone(regras.validar_data_aula(self.oficina, self.seg))
-        self.assertIn('reposição', regras.validar_data_aula(self.oficina, self.ter))
-        with self.assertRaisesMessage(regras.DataInvalida, 'futura'):
-            regras.validar_data_aula(self.oficina, HOJE + timedelta(days=1))
-        with self.assertRaisesMessage(regras.DataInvalida, 'período'):
-            regras.validar_data_aula(self.oficina, self.oficina.data_inicio - timedelta(days=1))
-
-    def test_oficina_arquivada_nao_recebe(self):
-        Oficina.objects.filter(pk=self.oficina.pk).update(status=Oficina.Status.ARQUIVADO)
-        self.oficina.refresh_from_db()
-        with self.assertRaises(regras.DataInvalida):
-            regras.validar_data_aula(self.oficina, self.seg)
-
-    def test_data_invalida_volta_com_mensagem(self):
-        self.client.force_login(self.monitor)
-        response = self.client.get(self.url_chamada(HOJE + timedelta(days=3)), follow=True)
-        self.assertContains(response, 'data futura')
-
-
-class LancamentoTests(BaseFrequenciaTestCase):
-    def test_monitor_lanca_chamada(self):
-        response = self.lancar(self.seg, {self.ana: 'P', self.bia: 'F', self.caio: 'J'},
-                               **{'observacoes': 'Coreografia nova'})
-        self.assertRedirects(response, reverse('frequencia:oficina', args=[self.oficina.pk]))
-        aula = RegistroAula.objects.get(oficina=self.oficina, data_aula=self.seg)
-        self.assertEqual(aula.lancado_por, self.monitor)
-        self.assertEqual(aula.observacoes, 'Coreografia nova')
-        self.assertEqual(
-            dict(aula.chamadas.values_list('matricula__aluno__nome', 'status_presenca')),
-            {'Ana': 'P', 'Bia': 'F', 'Caio': 'J'},
-        )
-
-    def test_corrigir_nao_duplica_e_registra_quem_alterou(self):
-        self.lancar(self.seg, {self.ana: 'P', self.bia: 'P', self.caio: 'P'})
-        self.lancar(self.seg, {self.ana: 'F', self.bia: 'P', self.caio: 'P'}, user=self.coord_a)
-        aula = RegistroAula.objects.get(oficina=self.oficina, data_aula=self.seg)
-        self.assertEqual(RegistroAula.objects.count(), 1)
-        self.assertEqual(aula.chamadas.count(), 3)
-        self.assertEqual(aula.chamadas.get(matricula__aluno=self.ana).status_presenca, 'F')
-        self.assertEqual((aula.lancado_por, aula.atualizado_por), (self.monitor, self.coord_a))
-
-    def test_todos_precisam_ter_presenca(self):
-        response = self.lancar(self.seg, {self.ana: 'P', self.bia: 'P'}, follow=True)
-        self.assertContains(response, 'Marque a presença de Caio')
-        self.assertFalse(RegistroAula.objects.exists())
-
-    def test_valor_invalido_e_recusado(self):
-        response = self.lancar(self.seg, {self.ana: 'X', self.bia: 'P', self.caio: 'P'})
-        self.assertEqual(response.status_code, 302)
-        self.assertFalse(RegistroAula.objects.exists())
-
-    def test_tela_comeca_com_todos_presentes(self):
-        self.client.force_login(self.monitor)
-        response = self.client.get(self.url_chamada(self.seg))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context['linhas']), 3)
-        self.assertContains(response, 'value="P" autocomplete="off" checked', count=3)
-
-    def test_so_matriculas_ativas_na_data(self):
-        novo = criar_aluno(self.escola_a, 900000004, 'Davi')
-        regras_matricula.matricular(novo, self.oficina, self.coord_a)  # inscrito hoje
-        saiu = self.m(self.caio)
-        regras_matricula.registrar_desistencia(saiu, self.coord_a, self.seg - timedelta(days=7))
-        nomes = {m.aluno.nome for m in regras.matriculas_ativas_na_data(self.oficina, self.seg)}
-        self.assertEqual(nomes, {'Ana', 'Bia'})  # Davi ainda não; Caio já tinha saído
-        desistiu_depois = self.m(self.bia)
-        regras_matricula.registrar_desistencia(desistiu_depois, self.coord_a, HOJE)
-        nomes = {m.aluno.nome for m in regras.matriculas_ativas_na_data(self.oficina, self.seg)}
-        self.assertEqual(nomes, {'Ana', 'Bia'})  # Bia saiu depois da aula: continua
-
-
-class PermissoesTests(BaseFrequenciaTestCase):
-    def test_quem_acessa(self):
-        url = reverse('frequencia:oficina', args=[self.oficina.pk])
-        for user, esperado in (
-            (self.monitor, 200), (self.coord_a, 200), (self.diretor, 200),
-            (self.outro_monitor, 403), (self.coord_b, 403),
-        ):
-            self.client.force_login(user)
-            self.assertEqual(self.client.get(url).status_code, esperado, user)
-            self.assertEqual(self.client.get(self.url_chamada(self.seg)).status_code, esperado, user)
-
-    def test_monitor_nao_designado_nao_lanca(self):
-        response = self.lancar(self.seg, {self.ana: 'P', self.bia: 'P', self.caio: 'P'}, user=self.outro_monitor)
-        self.assertEqual(response.status_code, 403)
-        self.assertFalse(RegistroAula.objects.exists())
-
-    def test_so_gestao_exclui_aula(self):
-        self.lancar(self.seg, {self.ana: 'P', self.bia: 'P', self.caio: 'P'})
-        aula = RegistroAula.objects.get()
-        url = reverse('frequencia:excluir_aula', args=[self.oficina.pk, aula.pk])
-        self.client.force_login(self.monitor)
-        self.assertEqual(self.client.post(url).status_code, 403)
-        self.client.force_login(self.coord_a)
-        self.client.post(url)
+    def test_alunos_sem_oficina_participam_e_salvam(self):
+        self.client.force_login(self.coord)
+        resposta = self.client.get(self.url())
+        self.assertContains(resposta, 'Ana')
+        self.assertContains(resposta, 'Bia')
+        self.assertEqual(resposta.context['total_alunos'], 2)
+        self.assertNotContains(resposta, 'por oficina')
+        self.assertEqual(self.client.post(self.url(), self.dados()).status_code, 302)
+        self.assertEqual(ChamadaGeral.objects.count(), 2)
         self.assertFalse(RegistroAula.objects.exists())
         self.assertFalse(Chamada.objects.exists())
+        self.assertFalse(Matricula.objects.exists())
 
+    def test_correcao_nao_duplica_e_preserva_autoria(self):
+        self.client.force_login(self.coord)
+        self.client.post(self.url(), self.dados())
+        self.client.force_login(self.diretor)
+        self.client.post(self.url(), self.dados(**{f'presenca_{self.ana.pk}': 'J', f'obs_{self.ana.pk}': 'Atestado'}))
+        chamada = ChamadaGeral.objects.get(aluno=self.ana)
+        self.assertEqual(ChamadaGeral.objects.count(), 2)
+        self.assertEqual((chamada.status_presenca, chamada.observacoes), ('J', 'Atestado'))
+        self.assertEqual((chamada.lancado_por, chamada.atualizado_por), (self.coord, self.diretor))
 
-class ResumoTests(BaseFrequenciaTestCase):
-    def test_percentual_conta_justificada_como_presenca(self):
-        self.lancar(self.seg, {self.ana: 'P', self.bia: 'F', self.caio: 'J'})
-        self.lancar(self.seg - timedelta(days=2), {self.ana: 'P', self.bia: 'F', self.caio: 'F'})
-        resumo = {r['matricula'].aluno.nome: r for r in regras.resumo_por_matricula(self.oficina)}
-        self.assertEqual(resumo['Ana']['percentual'], 100)
-        self.assertEqual(resumo['Bia']['percentual'], 0)
-        self.assertEqual(resumo['Caio']['percentual'], 50)
-        self.assertEqual((resumo['Caio']['matricula'].faltas, resumo['Caio']['matricula'].justificadas), (1, 1))
+    def test_filtro_turno_preservado_e_nao_altera_outro_turno(self):
+        self.client.force_login(self.coord)
+        self.client.post(self.url(), self.dados())
+        resposta = self.client.post(self.url(), self.dados(turno='MANHA', **{f'presenca_{self.ana.pk}': 'J', f'presenca_{self.bia.pk}': 'P'}))
+        self.assertIn('turno=MANHA', resposta.url)
+        self.assertEqual(ChamadaGeral.objects.get(aluno=self.bia).status_presenca, 'F')
+        pagina = self.client.get(self.url(), {'turno': 'MANHA'})
+        self.assertEqual(pagina.context['total_alunos'], 1)
+        self.assertContains(pagina, 'Turma A')
+        self.assertNotContains(pagina, 'Bia')
 
-    def test_tela_de_frequencia_mostra_aulas_e_resumo(self):
-        self.lancar(self.seg, {self.ana: 'P', self.bia: 'F', self.caio: 'P'})
+    def test_todos_os_turnos_e_legados_sem_turma(self):
+        Aluno.objects.filter(pk=self.ana.pk).update(turno=None, turma=None)
+        self.client.force_login(self.coord)
+        resposta = self.client.get(self.url())
+        self.assertEqual(resposta.context['total_alunos'], 2)
+        self.assertContains(resposta, 'Turma pendente')
+        self.assertEqual(self.client.post(self.url(), self.dados()).status_code, 302)
+        self.assertEqual(ChamadaGeral.objects.count(), 2)
+
+    def test_resposta_incompleta_ou_invalida_nao_salva_parcialmente(self):
+        self.client.force_login(self.coord)
+        for valor in ('', 'X'):
+            resposta = self.client.post(self.url(), self.dados(**{f'presenca_{self.bia.pk}': valor}))
+            self.assertContains(resposta, 'Marque a presença de Bia')
+            self.assertContains(resposta, f'name="presenca_{self.ana.pk}"')
+            self.assertFalse(ChamadaGeral.objects.exists())
+
+    def test_data_futura_invalida_e_turno_invalido(self):
+        self.client.force_login(self.coord)
+        for dados in (self.dados(data='errada'), self.dados(data=(HOJE + timedelta(days=1)).isoformat()), self.dados(turno='NOITE')):
+            self.assertEqual(self.client.post(self.url(), dados).status_code, 200)
+            self.assertFalse(ChamadaGeral.objects.exists())
+
+    def test_gestao_e_obrigatoria_inclusive_no_post(self):
+        self.assertEqual(self.client.get(self.url()).status_code, 302)
         self.client.force_login(self.monitor)
-        response = self.client.get(reverse('frequencia:oficina', args=[self.oficina.pk]))
-        self.assertContains(response, self.seg.strftime('%d/%m/%Y'))
-        self.assertNotContains(response, 'Excluir chamada')  # Monitor não exclui
+        self.assertEqual(self.client.get(self.url()).status_code, 403)
+        self.assertEqual(self.client.post(self.url(), self.dados()).status_code, 403)
+        self.assertFalse(ChamadaGeral.objects.exists())
+
+    def test_coordenador_ignora_unidade_e_aluno_adulterados(self):
+        self.client.force_login(self.coord)
+        resposta = self.client.get(self.url(), {'escola': self.b.pk})
+        self.assertEqual(resposta.context['escola'], self.a)
+        self.client.post(self.url(), self.dados(escola=self.b.pk, **{f'presenca_{self.caio.pk}': 'P'}))
+        self.assertFalse(ChamadaGeral.objects.filter(escola=self.b).exists())
+        self.assertFalse(ChamadaGeral.objects.filter(aluno=self.caio).exists())
+
+    def test_diretor_sem_foco_seleciona_unidade(self):
+        self.client.force_login(self.diretor)
+        self.assertIsNone(self.client.get(self.url()).context['escola'])
+        resposta = self.client.post(self.url(), {'escola': self.b.pk, 'data': HOJE.isoformat(), f'presenca_{self.caio.pk}': 'P'})
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(ChamadaGeral.objects.get().aluno, self.caio)
+
+    def test_unidade_invalida_retorna_404(self):
+        self.client.force_login(self.diretor)
+        for unidade in ('errada', '99999999'):
+            self.assertEqual(self.client.get(self.url(), {'escola': unidade}).status_code, 404)
+
+    def test_diretor_em_foco_nao_expande_escopo(self):
+        self.client.force_login(self.diretor)
+        sessao = self.client.session
+        sessao[CHAVE_SESSAO] = self.a.pk
+        sessao.save()
+        resposta = self.client.get(self.url(), {'escola': self.b.pk})
+        self.assertEqual(resposta.context['escola'], self.a)
+        self.client.post(self.url(), self.dados(escola=self.b.pk))
+        self.assertEqual(set(ChamadaGeral.objects.values_list('escola_id', flat=True)), {self.a.pk})
+
+    def test_constraint_impede_duplicacao(self):
+        ChamadaGeral.objects.create(escola=self.a, aluno=self.ana, data=HOJE, status_presenca='P')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            ChamadaGeral.objects.create(escola=self.a, aluno=self.ana, data=HOJE, status_presenca='F')
+
+    def test_historico_continua_corrigivel_apos_mudanca_de_unidade(self):
+        ontem = HOJE - timedelta(days=1)
+        ChamadaGeral.objects.create(escola=self.a, aluno=self.ana, data=ontem, status_presenca='P')
+        Aluno.objects.filter(pk=self.ana.pk).update(escola=self.b)
+        self.client.force_login(self.coord)
+        pagina = self.client.get(self.url(), {'data': ontem.isoformat()})
+        self.assertContains(pagina, 'Ana')
+        self.assertNotContains(self.client.get(self.url()), 'Ana')
+        resposta = self.client.post(self.url(), self.dados(data=ontem.isoformat(), **{f'presenca_{self.ana.pk}': 'J'}))
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(ChamadaGeral.objects.get(aluno=self.ana).status_presenca, 'J')
+
+    def test_rotas_por_oficina_nao_permitem_escrita_nem_monitor(self):
+        oficina = criar_oficina(criar_tag(escola=self.a, nome='Arte'))
+        oficina.monitores.add(self.monitor)
+        for nome, args in (('oficina', [oficina.pk]), ('chamada', [oficina.pk]), ('excluir_aula', [oficina.pk, 1])):
+            url = reverse(f'frequencia:{nome}', args=args)
+            self.client.force_login(self.coord)
+            self.assertEqual(self.client.post(url, self.dados()).status_code, 405)
+            self.assertEqual(self.client.get(url).status_code, 302)
+            self.client.force_login(self.monitor)
+            self.assertEqual(self.client.get(url).status_code, 403)
+            self.assertEqual(self.client.post(url, self.dados()).status_code, 403)
+        self.assertFalse(ChamadaGeral.objects.exists())
+
+    def test_consolidacao_preserva_originais_e_sinaliza_divergencias(self):
+        tipo = criar_tag(escola=self.a, nome='Arte')
+        for nome, presenca in (('Dança', 'P'), ('Teatro', 'F')):
+            oficina = criar_oficina(tipo, nome)
+            matricula = Matricula.objects.create(aluno=self.ana, oficina=oficina)
+            registro = RegistroAula.objects.create(oficina=oficina, data_aula=HOJE, lancado_por=self.monitor)
+            Chamada.objects.create(registro_aula=registro, matricula=matricula, status_presenca=presenca)
+            outra = Matricula.objects.create(aluno=self.bia, oficina=oficina)
+            Chamada.objects.create(registro_aula=registro, matricula=outra, status_presenca='J', observacoes='Atestado')
+        consolidar = import_module('frequencia.migrations.0003_consolidar_historico').consolidar
+        editor = SimpleNamespace(connection=connection)
+        consolidar(apps, editor)
+        self.assertEqual(Chamada.objects.count(), 4)
+        self.assertEqual(ChamadaGeral.objects.count(), 2)
+        self.assertEqual(ChamadaGeral.objects.get(aluno=self.ana).status_presenca, '')
+        self.assertEqual(ChamadaGeral.objects.get(aluno=self.bia).status_presenca, 'J')
+        self.client.force_login(self.coord)
+        resposta = self.client.get(self.url())
+        self.assertContains(resposta, 'presenças divergentes')
+        self.client.post(self.url(), self.dados())
+        consolidar(apps, editor)
+        self.assertEqual(ChamadaGeral.objects.get(aluno=self.ana).status_presenca, 'P')
+        self.assertEqual(Chamada.objects.count(), 4)

@@ -1,61 +1,18 @@
 {% extends "core/base.html" %}
-
 {% block title %}{{ oficina.nome }}{% endblock %}
-
 {% block content %}
-<a href="{% url 'oficinas:lista' %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</a>
-<div class="d-flex justify-content-between align-items-start mt-2 mb-3">
-    <div>
-        <h1 class="h4 mb-1">{{ oficina.nome }} {% include "oficinas/_status_badge.html" %}</h1>
-        <div class="text-muted">{{ oficina.tipo_oficina }} · {{ oficina.escola }}</div>
-    </div>
-    {% if pode_editar %}
-    <a href="{% url 'oficinas:editar' oficina.pk %}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a>
-    {% endif %}
+<div class="cabecalho-pagina d-flex flex-wrap justify-content-between align-items-start gap-2 mt-2 mb-4">
+    <div><h1 class="h4 mb-1"><span class="d-inline-block rounded-circle me-2" style="width:1rem;height:1rem;background:{{ oficina.cor|default:'#adb5bd' }};"></span>{{ oficina.nome }}</h1><div class="text-muted">{% if oficina.arquivada %}Arquivada{% else %}Disponível no catálogo da rede{% endif %}</div></div>
+    {% if is_diretor %}<div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'oficinas:editar' oficina.pk %}" class="btn btn-outline-primary">Editar</a>
+        <form method="post" action="{% url 'oficinas:arquivar' oficina.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary" type="submit">{% if oficina.arquivada %}Reativar{% else %}Arquivar{% endif %}</button></form>
+        <a href="{% url 'oficinas:excluir' oficina.pk %}" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Excluir oficina</a>
+    </div>{% endif %}
 </div>
-
-<div class="row g-3">
-    <div class="col-lg-7">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h2 class="h6 text-uppercase text-muted mb-3">Dados da oficina</h2>
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">Dias</dt><dd class="col-sm-8">{{ oficina.dias_semana_display }}</dd>
-                    <dt class="col-sm-4">Horário</dt><dd class="col-sm-8">{{ oficina.get_turno_display }} · {{ oficina.horario|time:"H:i" }} às {{ oficina.horario_fim|time:"H:i" }}</dd>
-                    <dt class="col-sm-4">Período</dt><dd class="col-sm-8">{{ oficina.data_inicio|date:"d/m/Y" }} a {{ oficina.data_fim|date:"d/m/Y" }}</dd>
-                    <dt class="col-sm-4">Carga horária</dt><dd class="col-sm-8">{{ oficina.carga_horaria }} h</dd>
-                    <dt class="col-sm-4">Vagas</dt><dd class="col-sm-8">{{ oficina.vagas }}</dd>
-                    <dt class="col-sm-4">Endereço</dt><dd class="col-sm-8">{{ oficina.escola.endereco|default:"—" }}</dd>
-                </dl>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-5">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h2 class="h6 text-uppercase text-muted mb-3">Monitores (escala)</h2>
-                {% for d in designacoes %}
-                    <div class="mb-2 d-flex justify-content-between align-items-center gap-2">
-                        <span><i class="bi bi-person-badge"></i> {{ d.monitor.get_full_name|default:d.monitor.username }}{% if not d.monitor.is_active %} <span class="badge text-bg-secondary">inativo</span>{% endif %}
-                            <span class="small text-muted">· {% if d.todos_os_dias %}todos os dias{% else %}{{ d.dias_display }}{% endif %}</span></span>
-                        {% if pode_editar and d.monitor.is_active %}<a href="{% url 'escalas:monitor' d.monitor.pk %}" class="small text-decoration-none">escala</a>{% endif %}
-                    </div>
-                {% empty %}
-                    <p class="small text-muted mb-2">Nenhum monitor escalado.</p>
-                {% endfor %}
-                {% if pode_editar %}<a href="{% url 'escalas:grade' %}" class="small">Montar escala</a>{% endif %}
-                {% if oficina.nome_monitor %}
-                    <hr>
-                    <div class="small text-muted">Monitor sem conta no sistema</div>
-                    <div>{{ oficina.nome_monitor }}{% if oficina.telefone_monitor %} · {{ oficina.telefone_monitor }}{% endif %}</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="d-flex flex-wrap gap-2 mt-3">
-    <a href="{% url 'frequencia:oficina' oficina.pk %}" class="btn btn-primary"><i class="bi bi-check2-square"></i> Ficha de frequência</a>
-    <a href="{% url 'matriculas:oficina' oficina.pk %}" class="btn btn-outline-primary"><i class="bi bi-people"></i> Alunos matriculados</a>
-</div>
+{% if oficina.arquivada %}<div class="alert alert-secondary small">Esta oficina está fora do cronograma ativo. Reativar a oficina restaura os vínculos existentes.</div>{% endif %}
+<div class="card shadow-sm mb-3"><div class="card-header"><h2 class="h6 mb-0">Horários e turmas</h2></div><ul class="list-group list-group-flush">
+{% for item in atividades %}<li class="list-group-item"><a href="{% url 'escalas:detalhe' item.pk %}" class="fw-semibold text-decoration-none">{{ item.escola }}</a><div class="small text-muted">{{ item.get_turno_display }} · {{ item.turmas_display }} · {{ item.dias_semana_display }} · {{ item.horario|time:"H:i" }}–{{ item.horario_fim|time:"H:i" }}</div></li>
+{% empty %}<li class="list-group-item text-muted">Nenhum horário vinculado.</li>{% endfor %}
+</ul></div>
+{% if not oficina.arquivada %}{% if is_diretor or is_coordenador %}<a href="{% url 'escalas:criar' %}?oficina={{ oficina.pk }}" class="btn btn-primary">Vincular ao cronograma</a>{% endif %}{% endif %}
 {% endblock %}

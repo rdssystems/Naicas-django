@@ -1,87 +1,48 @@
 {% extends "core/base.html" %}
-
 {% block title %}Início{% endblock %}
-
+{% block retorno_pagina %}{% endblock %}
 {% block content %}
-<h1 class="h4 mb-1">Olá, {{ user.first_name|default:user.username }}</h1>
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">Olá, {{ user.first_name|default:user.username }}</h1></header>
 <p class="text-muted mb-4">
-    {% if is_diretor and escola_em_foco %}Você está dentro da unidade <strong>{{ escola_em_foco.nome }}</strong>. Use o seletor no topo para trocar de unidade ou voltar à visão geral.
-    {% elif is_diretor %}Visão geral de toda a rede Naica. Use o seletor de unidade no topo para entrar em uma escola.
+    {% if is_diretor and escola_em_foco %}Você está dentro da unidade <strong>{{ escola_em_foco.nome }}</strong>. Abra o menu para trocar de unidade ou voltar à visão geral.
+    {% elif is_diretor %}Visão geral de toda a rede Naica. Abra o menu para entrar em uma unidade.
     {% elif is_coordenador %}Unidade: <strong>{{ active_escola }}</strong>
-    {% elif is_monitor %}Aqui você encontra as oficinas em que está designado.{% endif %}
+    {% elif is_monitor %}Consulte o cronograma das oficinas disponíveis para você.{% endif %}
 </p>
-
 <div class="row g-3">
-    {% if is_monitor %}
+    {% if is_diretor or is_coordenador %}
     <div class="col-sm-6 col-lg-4">
-        <a href="{% url 'escalas:minha_semana' %}" class="card h-100 text-decoration-none shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-calendar-week fs-3 text-primary"></i>
-                <h2 class="h6 mt-2 mb-1">Minha semana</h2>
-                <p class="small text-muted mb-0">Suas oficinas por dia e a chamada de hoje.</p>
-            </div>
+        <a href="{% url 'dashboard:painel' %}" class="card h-100 text-decoration-none shadow-sm">
+            <div class="card-body"><i class="bi bi-speedometer2 fs-3 text-primary"></i><h2 class="h6 mt-2 mb-1">Visão Geral</h2><p class="small text-muted mb-0">Indicadores, frequência e pendências{% if is_coordenador or escola_em_foco %} da sua unidade{% else %} da rede{% endif %}.</p></div>
         </a>
     </div>
     {% endif %}
-    {% if is_diretor or is_coordenador %}
     <div class="col-sm-6 col-lg-4">
         <a href="{% url 'escalas:grade' %}" class="card h-100 text-decoration-none shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-calendar-week fs-3 text-primary"></i>
-                <h2 class="h6 mt-2 mb-1">Escala</h2>
-                <p class="small text-muted mb-0">Quais monitores atendem cada oficina, por dia.</p>
-            </div>
+            <div class="card-body"><i class="bi bi-calendar-week fs-3 text-primary"></i><h2 class="h6 mt-2 mb-1">Cronograma</h2><p class="small text-muted mb-0">Dias, horários e turmas A, B e C das oficinas.</p></div>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+        <a href="{% url 'oficinas:lista' %}" class="card h-100 text-decoration-none shadow-sm">
+            <div class="card-body"><i class="bi bi-easel fs-3 text-primary"></i><h2 class="h6 mt-2 mb-1">{% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</h2><p class="small text-muted mb-0">Catálogo de oficinas para o cronograma das turmas.</p></div>
+        </a>
+    </div>
+    {% if is_diretor or is_coordenador %}
+    <div class="col-sm-6 col-lg-4">
+        <a href="{% url 'alunos:lista' %}" class="card h-100 text-decoration-none shadow-sm">
+            <div class="card-body"><i class="bi bi-person-vcard fs-3 text-primary"></i><h2 class="h6 mt-2 mb-1">Atendidos</h2><p class="small text-muted mb-0">Cadastro dos atendidos{% if is_coordenador %} da sua unidade{% endif %}.</p></div>
         </a>
     </div>
     {% endif %}
     {% if is_diretor %}
     <div class="col-sm-6 col-lg-4">
         <a href="{% url 'escolas:lista' %}" class="card h-100 text-decoration-none shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-building fs-3 text-primary"></i>
-                <h2 class="h6 mt-2 mb-1">Unidades</h2>
-                <p class="small text-muted mb-0">Cadastrar e editar as Escolas Naica.</p>
-            </div>
+            <div class="card-body"><i class="bi bi-building fs-3 text-primary"></i><h2 class="h6 mt-2 mb-1">Unidades</h2><p class="small text-muted mb-0">Cadastrar e editar as Escolas Naica.</p></div>
         </a>
     </div>
     <div class="col-sm-6 col-lg-4">
         <a href="{% url 'usuarios:lista' %}" class="card h-100 text-decoration-none shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-people fs-3 text-primary"></i>
-                <h2 class="h6 mt-2 mb-1">Usuários</h2>
-                <p class="small text-muted mb-0">Contas de Coordenadores e Monitores.</p>
-            </div>
-        </a>
-    </div>
-    {% endif %}
-    <div class="col-sm-6 col-lg-4">
-        <a href="{% url 'oficinas:lista' %}" class="card h-100 text-decoration-none shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-easel fs-3 text-primary"></i>
-                <h2 class="h6 mt-2 mb-1">{% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</h2>
-                <p class="small text-muted mb-0">
-                    {% if is_monitor %}Oficinas em que você está designado.{% else %}Turmas, horários e monitores designados.{% endif %}
-                </p>
-            </div>
-        </a>
-    </div>
-    {% if is_diretor or is_coordenador %}
-    <div class="col-sm-6 col-lg-4">
-        <a href="{% url 'alunos:lista' %}" class="card h-100 text-decoration-none shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-person-vcard fs-3 text-primary"></i>
-                <h2 class="h6 mt-2 mb-1">Alunos</h2>
-                <p class="small text-muted mb-0">Cadastro dos alunos{% if is_coordenador %} da sua unidade{% endif %}.</p>
-            </div>
-        </a>
-    </div>
-    <div class="col-sm-6 col-lg-4">
-        <a href="{% url 'oficinas:tipos' %}" class="card h-100 text-decoration-none shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-tags fs-3 text-primary"></i>
-                <h2 class="h6 mt-2 mb-1">Tipos de oficina</h2>
-                <p class="small text-muted mb-0">Categorias das oficinas{% if is_coordenador %} da sua unidade{% endif %}.</p>
-            </div>
+            <div class="card-body"><i class="bi bi-people fs-3 text-primary"></i><h2 class="h6 mt-2 mb-1">Usuários</h2><p class="small text-muted mb-0">Contas de Coordenadores e Monitores.</p></div>
         </a>
     </div>
     {% endif %}

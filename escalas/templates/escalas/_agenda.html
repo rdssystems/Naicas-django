@@ -1,39 +1,18 @@
 {% load l10n %}
 {% comment %}
-Aba "Agenda": semana padrão, dias em colunas e horas descendo. Precisa de:
-agenda (colunas, horas, total_horas), monitores, monitor_filtro, hoje.
+Semana padrão, dias em colunas e horas descendo. Precisa de:
+agenda (colunas, horas, total_horas) e hoje.
 Posições vêm prontas do servidor (escalas.regras.agenda_semanal) em %; usar
 `unlocalize` para não sair "12,5%" (vírgula) no CSS.
 {% endcomment %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <form method="get" class="d-flex align-items-center gap-2 mb-0">
-        <label for="filtro_monitor" class="small text-muted text-nowrap">Monitor</label>
-        <select name="monitor" id="filtro_monitor" class="form-select form-select-sm" onchange="this.form.submit()">
-            <option value="">Todos os monitores</option>
-            {% for m in monitores %}
-                <option value="{{ m.pk }}" {% if monitor_filtro.pk == m.pk %}selected{% endif %}>{{ m.get_full_name|default:m.username }}</option>
-            {% endfor %}
-        </select>
-        <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filtrar</button></noscript>
-    </form>
-    {% if not monitor_filtro %}
-    <div class="small text-muted d-flex align-items-center gap-2">
-        <span class="agenda-legenda agenda-legenda-sem"></span> Oficina sem monitor escalado no dia
-    </div>
-    {% else %}
-    <a href="{% url 'escalas:monitor' monitor_filtro.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Editar escala de {{ monitor_filtro.first_name|default:monitor_filtro.username }}</a>
-    {% endif %}
-</div>
-
 {% if agenda.vazia %}
 <div class="alert alert-light border small">
-    {% if monitor_filtro %}{{ monitor_filtro.get_full_name|default:monitor_filtro.username }} ainda não tem oficinas na escala{% if active_escola %} desta unidade{% endif %}.
-    {% else %}Nenhuma oficina aberta ou em andamento{% if active_escola %} nesta unidade{% endif %}.{% endif %}
+    Nenhuma oficina no cronograma para os filtros selecionados.
 </div>
-{% endif %}
+{% else %}
 {% with colunas=agenda.colunas %}
 <div class="agenda-rolagem card shadow-sm">
-    <div class="agenda" style="--agenda-dias: {{ colunas|length }}; --agenda-horas: {{ agenda.total_horas }};">
+    <div class="agenda" style="--agenda-dias: {{ colunas|length }}; --agenda-horas: {{ agenda.total_horas }}; --agenda-hora-altura: {{ agenda.altura_hora|unlocalize }}rem; --agenda-colunas: {% for coluna in colunas %}minmax({{ coluna.largura_minima|unlocalize }}rem, 1fr) {% endfor %};">
         <div class="agenda-canto"></div>
         {% for coluna in colunas %}
             <div class="agenda-titulo{% if coluna.dia == hoje %} agenda-titulo-hoje{% endif %}">{{ coluna.nome }}{% if coluna.dia == hoje %} <span class="small">· hoje</span>{% endif %}</div>
@@ -48,15 +27,15 @@ Posições vêm prontas do servidor (escalas.regras.agenda_semanal) em %; usar
             <div class="agenda-dia{% if coluna.dia == hoje %} agenda-dia-hoje{% endif %}">
                 {% for b in coluna.blocos %}
                 {% with o=b.oficina %}
-                <a href="{% url 'oficinas:detalhe' o.pk %}"
-                   class="agenda-bloco{% if b.sem_monitor %} agenda-bloco-sem{% endif %}"
+                <a href="{% url 'escalas:detalhe' o.pk %}"
+                   class="agenda-bloco"
                    style="top: {{ b.top|unlocalize }}%; height: {{ b.altura|unlocalize }}%; left: {{ b.esquerda|unlocalize }}%; width: {{ b.largura|unlocalize }}%;"
-                   title="{{ o.nome }} · {{ o.escola.nome }} · {{ o.horario|time:'H:i' }}–{{ o.horario_fim|time:'H:i' }}">
+                   title="{{ o.nome }} · Instrutor: {{ o.instrutor_nome|default:'Não informado' }} · Turma: {{ o.turmas|join:', '|default:'Não informada' }} · {{ o.horario|time:'H:i' }}–{{ o.horario_fim|time:'H:i' }} · {{ o.escola.nome }}">
                     <span class="agenda-bloco-nome">{{ o.nome }}</span>
-                    <span class="agenda-bloco-info">{{ o.horario|time:"H:i" }}–{{ o.horario_fim|time:"H:i" }}{% if not active_escola %} · {{ o.escola.nome }}{% endif %}</span>
-                    <span class="agenda-bloco-monitores">
-                        {% for m in b.monitores %}<span>{{ m.first_name|default:m.username }}</span>{% empty %}<em>sem monitor</em>{% endfor %}
-                    </span>
+                    <span class="agenda-bloco-info" title="{{ o.instrutor_nome|default:'Não informado' }}"><strong>Instrutor:</strong> {{ o.instrutor_nome|default:"Não informado" }}</span>
+                    <span class="agenda-bloco-info"><strong>Turma:</strong> {{ o.turmas|join:", "|default:"Não informada" }}</span>
+                    <span class="agenda-bloco-info agenda-bloco-horario"><strong>Horário:</strong> {{ o.horario|time:"H:i" }}–{{ o.horario_fim|time:"H:i" }}</span>
+                    {% if not unidade_cronograma and not active_escola %}<span class="agenda-bloco-info">{{ o.escola.nome }}</span>{% endif %}
                 </a>
                 {% endwith %}
                 {% endfor %}
@@ -65,3 +44,4 @@ Posições vêm prontas do servidor (escalas.regras.agenda_semanal) em %; usar
     </div>
 </div>
 {% endwith %}
+{% endif %}

@@ -5,7 +5,7 @@ O campo DELETE fica escondido e é marcado pelo botão Remover (core/_formset_js
 {% endcomment %}
 <div class="border rounded p-2 mb-2 bg-white{% if form.DELETE.value %} d-none{% endif %}" data-formset-linha>
     {% for campo in form.hidden_fields %}{{ campo }}{% endfor %}
-    {% if form.responsavel.value %}<div class="small text-primary mb-1"><i class="bi bi-person-check"></i> Responsável do aluno</div>{% endif %}
+    {% if form.responsavel.value %}<div class="small text-primary mb-1"><i class="bi bi-person-check"></i> Responsável do atendido</div>{% endif %}
     <div class="d-none">{{ form.DELETE }}</div>
     {% for erro in form.non_field_errors %}<div class="text-danger small">{{ erro }}</div>{% endfor %}
     <div class="row g-2 align-items-start">

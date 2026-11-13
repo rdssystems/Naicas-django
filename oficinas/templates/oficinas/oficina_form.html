@@ -1,29 +1,11 @@
 {% extends "core/base.html" %}
-
 {% block title %}{% if oficina %}Editar oficina{% else %}Nova oficina{% endif %}{% endblock %}
-
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <a href="{% if oficina %}{% url 'oficinas:detalhe' oficina.pk %}{% else %}{% url 'oficinas:lista' %}{% endif %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Voltar</a>
-        <h1 class="h4 mt-2 mb-3">{% if oficina %}Editar {{ oficina.nome }}{% else %}Nova oficina{% endif %}</h1>
-        {% if not form.tipo_oficina.field.queryset.exists %}
-            <div class="alert alert-warning">
-                Cadastre primeiro um <a href="{% url 'oficinas:tipo_criar' %}">tipo de oficina</a>{% if is_coordenador %} para a sua unidade{% endif %}.
-            </div>
-        {% endif %}
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    {% include "core/_form_campos.html" with form=form %}
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="{% if oficina %}{% url 'oficinas:detalhe' oficina.pk %}{% else %}{% url 'oficinas:lista' %}{% endif %}" class="btn btn-outline-secondary">Cancelar</a>
-                        <button type="submit" class="btn btn-primary">Salvar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="row justify-content-center"><div class="col-lg-6">
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">{% if oficina %}Editar {{ oficina.nome }}{% else %}Nova oficina{% endif %}</h1></header>
+<p class="small text-muted">A oficina fica disponível para todas as unidades. Os horários e turmas são definidos no cronograma.</p>
+<div class="card shadow-sm"><div class="card-body"><form method="post" novalidate>
+{% csrf_token %}{% include "core/_form_campos.html" with form=form %}
+<div class="d-flex justify-content-end gap-2"><a href="{% url 'oficinas:lista' %}" class="btn btn-outline-secondary">Cancelar</a><button type="submit" class="btn btn-primary">Salvar</button></div>
+</form></div></div></div></div>
 {% endblock %}

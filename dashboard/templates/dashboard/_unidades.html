@@ -1,0 +1,31 @@
+<section class="card shadow-sm mb-4" id="unidades" aria-labelledby="titulo-unidades">
+    <div class="card-body pb-0"><h2 class="h6 mb-1" id="titulo-unidades">Unidades da rede</h2><p class="small text-muted mb-3">Entre numa unidade para acompanhar a rotina e manter os filtros de atendidos selecionados.</p></div>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Unidade</th><th class="text-end">Atendidos</th><th class="text-end">Horários</th><th class="text-end">Frequência · 30 dias</th><th>Chamada de hoje</th><th></th></tr></thead>
+        <tbody>{% for item in unidades %}<tr>
+            <td class="fw-semibold">{{ item.escola.nome }}</td><td class="text-end">{{ item.alunos }}</td><td class="text-end">{{ item.oficinas }}</td>
+            <td class="text-end">{% if item.frequencia is None %}<span class="text-muted">—</span>{% else %}<span class="{% if item.frequencia < limiar_frequencia_baixa %}text-danger fw-semibold{% endif %}">{{ item.frequencia }}%</span>{% endif %}</td>
+            <td class="small">
+                <div class="chamadas-turnos">
+                    {% for chamada in item.chamadas_por_turno %}
+                    <div class="chamada-turno">
+                        <span class="fw-semibold">{{ chamada.rotulo }}</span>
+                        {% if chamada.pendentes %}
+                        <span class="text-warning-emphasis" title="{{ chamada.pendentes }} atendido{{ chamada.pendentes|pluralize }} sem chamada"><i class="bi bi-clock" aria-hidden="true"></i> Pendente</span>
+                        {% elif chamada.total %}
+                        <span class="text-success"><i class="bi bi-check-circle" aria-hidden="true"></i> Chamada feita</span>
+                        {% else %}
+                        <span class="text-muted">Sem atendidos</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </td>
+            <td class="text-end"><form method="post" action="{% url 'escolas:selecionar_foco' %}" class="mb-0">{% csrf_token %}
+                <input type="hidden" name="escola" value="{{ item.escola.pk }}">
+                <input type="hidden" name="next" value="{% url 'dashboard:painel' %}{% if filtros_alunos_querystring %}?{{ filtros_alunos_querystring }}{% endif %}">
+                <button type="submit" class="btn btn-sm btn-outline-primary" aria-label="Entrar na unidade {{ item.escola.nome }}">Entrar</button>
+            </form></td>
+        </tr>{% endfor %}</tbody>
+    </table></div>
+</section>

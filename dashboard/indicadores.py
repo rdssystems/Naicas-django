@@ -1,203 +1,178 @@
-"""
-Indicadores do dashboard. Toda função recebe o RECORTE (querysets de oficinas e
-alunos já filtrados pelo escopo), então serve tanto para o painel do usuário
-(rede, unidade em foco ou unidade do Coordenador) quanto para cada linha da
-tabela por unidade. O escopo vem sempre de core.acesso / visiveis_para.
-"""
-
+"""Indicadores da unidade/rede: frequência geral e cronograma por turma."""
 from collections import Counter
 from datetime import timedelta
 
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.utils import timezone
 
 from alunos import etapas
 from alunos.models import Aluno
 from core import acesso
 from escolas.models import EscolaNaica
-from frequencia.models import Chamada, RegistroAula
-from matriculas.models import Matricula
-from oficinas.models import Designacao, Oficina
+from frequencia.models import ChamadaGeral
+from oficinas.models import AtividadeCronograma
 
-ATIVAS = (Oficina.Status.ABERTA, Oficina.Status.EM_ANDAMENTO)
-META_FREQUENCIA = 75  # % — abaixo disso o aluno entra em "risco de evasão"
-MIN_AULAS_RISCO = 3  # com menos aulas lançadas o % ainda não diz nada
+
+LIMIAR_FREQUENCIA_BAIXA = 75
+MIN_AULAS_RISCO = 3
 JANELA_DIAS = 30
 SEMANAS_GRAFICO = 8
-
-PRESENTE_OU_JUSTIFICADA = Q(status_presenca__in=[Chamada.Presenca.PRESENTE, Chamada.Presenca.JUSTIFICADA])
+PRESENTE_OU_JUSTIFICADA = Q(status_presenca__in=['P', 'J'])
 
 
 def recorte_do_usuario(user):
     return {
-        'oficinas': acesso.filtrar_por_escola(user, Oficina.objects.all()),
-        'alunos': Aluno.objects.visiveis_para(user),
+        'escolas': acesso.filtrar_por_escola(user, EscolaNaica.objects.all(), campo='pk'),
+        'oficinas': acesso.filtrar_por_escola(user, AtividadeCronograma.objects.all()),
+        'alunos': Aluno.objects.visiveis_para(user).ativos(),
     }
 
 
 def recorte_da_unidade(escola):
-    return {
-        'oficinas': Oficina.objects.filter(escola=escola),
-        'alunos': Aluno.objects.da_unidade(escola),
-    }
+    return {'escolas': EscolaNaica.objects.filter(pk=escola.pk),
+            'oficinas': AtividadeCronograma.objects.filter(escola=escola), 'alunos': Aluno.objects.da_unidade(escola).ativos()}
 
 
 def _pct(parte, total):
     return round(100 * parte / total) if total else None
 
 
-# ---------- Alunos ----------
-
 def alunos(recorte):
     qs = recorte['alunos'].select_related('endereco', 'ficha_saude').prefetch_related(*etapas.prefetches())
     pendencias = Counter()
-    incompletos = 0
-    total = 0
+    incompletos = total = 0
     for aluno in qs:
         total += 1
         faltando = etapas.etapas_pendentes(aluno)
         if faltando:
             incompletos += 1
             pendencias.update(faltando)
-    fila = recorte['alunos'].exclude(matriculas__status=Matricula.Status.CURSANDO).count()
     return {
-        'total': total,
-        'incompletos': incompletos,
-        'pendencias': pendencias.most_common(),
-        'fila_espera': fila,
-    }
-
-
-# ---------- Matrículas e vagas ----------
-
-def ocupacao(recorte):
-    ativas = list(
-        recorte['oficinas'].filter(status__in=ATIVAS).select_related('escola')
-        .annotate(ocupadas=Count('matriculas', filter=Q(matriculas__status=Matricula.Status.CURSANDO)))
-    )
-    vagas = sum(o.vagas for o in ativas)
-    ocupadas = sum(o.ocupadas for o in ativas)
-    for o in ativas:
-        o.percentual = _pct(o.ocupadas, o.vagas) or 0
-    return {
-        'cursando': Matricula.objects.filter(
-            oficina__in=recorte['oficinas'], status=Matricula.Status.CURSANDO
+        'total': total, 'incompletos': incompletos, 'pendencias': pendencias.most_common(),
+        'classificacao_pendente': recorte['alunos'].filter(
+            Q(turno__isnull=True) | Q(turno='') | Q(turma__isnull=True) | Q(turma=''),
         ).count(),
-        'vagas': vagas,
-        'ocupadas': ocupadas,
-        'percentual': _pct(ocupadas, vagas),
-        'lotadas': [o for o in ativas if o.ocupadas >= o.vagas],
-        'oficinas': sorted(ativas, key=lambda o: (-o.percentual, o.nome)),
     }
 
 
-# ---------- Frequência ----------
+def cronograma(recorte):
+    ativas = recorte['oficinas'].filter(ativo=True, oficina__arquivada=False)
+    return {'oficinas': ativas.select_related('escola', 'oficina').order_by('horario', 'oficina__nome'),
+            'total': ativas.count(), 'turmas_pendentes': ativas.filter(turmas=[]).count()}
+
+
+def chamadas_do_recorte(recorte):
+    return ChamadaGeral.objects.filter(
+        escola__in=recorte['escolas'], aluno__in=recorte['alunos'], status_presenca__in=['P', 'F', 'J'],
+    )
+
 
 def frequencia(recorte, hoje):
-    chamadas = Chamada.objects.filter(registro_aula__oficina__in=recorte['oficinas'])
-    janela = chamadas.filter(registro_aula__data_aula__gte=hoje - timedelta(days=JANELA_DIAS))
+    chamadas = chamadas_do_recorte(recorte).filter(data__lte=hoje)
+    janela = chamadas.filter(data__gte=hoje - timedelta(days=JANELA_DIAS))
     totais = janela.aggregate(total=Count('id'), ok=Count('id', filter=PRESENTE_OU_JUSTIFICADA))
-
-    # Semanas (segunda a domingo), da mais antiga para a atual.
     inicio_semana_atual = hoje - timedelta(days=hoje.weekday())
     semanas = []
     for i in range(SEMANAS_GRAFICO - 1, -1, -1):
         inicio = inicio_semana_atual - timedelta(weeks=i)
-        da_semana = chamadas.filter(registro_aula__data_aula__range=(inicio, inicio + timedelta(days=6)))
-        conta = da_semana.aggregate(total=Count('id'), ok=Count('id', filter=PRESENTE_OU_JUSTIFICADA))
-        semanas.append({
-            'inicio': inicio,
-            'percentual': _pct(conta['ok'], conta['total']),
-            'chamadas': conta['total'],
-        })
-
+        conta = chamadas.filter(data__range=(inicio, inicio + timedelta(days=6))).aggregate(
+            total=Count('id'), ok=Count('id', filter=PRESENTE_OU_JUSTIFICADA))
+        semanas.append({'inicio': inicio, 'percentual': _pct(conta['ok'], conta['total']),
+                        'chamadas': conta['total'], 'presencas': conta['ok']})
     risco = []
-    for m in (
-        Matricula.objects.filter(oficina__in=recorte['oficinas'], status=Matricula.Status.CURSANDO)
-        .select_related('aluno', 'oficina')
-        .annotate(
-            aulas=Count('chamadas'),
-            ok=Count('chamadas', filter=Q(chamadas__status_presenca__in=['P', 'J'])),
-        )
-        .filter(aulas__gte=MIN_AULAS_RISCO)
-    ):
-        m.percentual = _pct(m.ok, m.aulas)
-        if m.percentual < META_FREQUENCIA:
-            risco.append(m)
-    risco.sort(key=lambda m: (m.percentual, m.aluno.nome))
+    for aluno in recorte['alunos'].annotate(
+        aulas=Count('chamadas_gerais', filter=Q(chamadas_gerais__in=chamadas)),
+        ok=Count('chamadas_gerais', filter=Q(chamadas_gerais__in=chamadas, chamadas_gerais__status_presenca__in=['P', 'J'])),
+    ).filter(aulas__gte=MIN_AULAS_RISCO):
+        aluno.percentual = _pct(aluno.ok, aluno.aulas)
+        if aluno.percentual < LIMIAR_FREQUENCIA_BAIXA:
+            risco.append(aluno)
+    risco.sort(key=lambda aluno: (aluno.percentual, aluno.nome))
+    revisoes = ChamadaGeral.objects.filter(
+        escola__in=recorte['escolas'], aluno__in=recorte['alunos'], status_presenca='', data__lte=hoje,
+    ).order_by('-data', 'escola__nome').values('data', 'escola_id', 'escola__nome').annotate(total=Count('pk'))
+    return {'percentual': _pct(totais['ok'], totais['total']), 'chamadas': totais['total'],
+            'semanas': semanas, 'risco': risco, 'revisoes': revisoes}
 
-    return {
-        'percentual': _pct(totais['ok'], totais['total']),
-        'chamadas': totais['total'],
-        'semanas': semanas,
-        'risco': risco,
-    }
-
-
-# ---------- Operação de hoje ----------
 
 def oficinas_de_hoje(recorte, hoje):
-    return list(
-        recorte['oficinas'].filter(
-            status__in=ATIVAS, dias_semana__contains=[hoje.weekday()],
-            data_inicio__lte=hoje, data_fim__gte=hoje,
-        ).select_related('escola').order_by('horario', 'nome')
-    )
+    return list(recorte['oficinas'].filter(
+        ativo=True, oficina__arquivada=False, dias_semana__contains=[hoje.weekday()],
+    ).select_related('escola', 'oficina').order_by('horario', 'oficina__nome'))
 
 
 def operacao_de_hoje(recorte, hoje):
-    de_hoje = oficinas_de_hoje(recorte, hoje)
-    com_chamada = set(
-        RegistroAula.objects.filter(oficina__in=de_hoje, data_aula=hoje).values_list('oficina_id', flat=True)
-    )
-    cobertas = set(
-        Designacao.objects.filter(oficina__in=de_hoje, monitor__is_active=True)
-        .filter(Q(dias_semana=[]) | Q(dias_semana__contains=[hoje.weekday()]))
-        .values_list('oficina_id', flat=True)
-    )
-    return {
-        'oficinas': de_hoje,
-        'chamada_pendente': [o for o in de_hoje if o.pk not in com_chamada],
-        'sem_monitor': [o for o in de_hoje if o.pk not in cobertas],
+    oficinas = oficinas_de_hoje(recorte, hoje)
+    atividades_por_escola = {}
+    for atividade in oficinas:
+        atividades_por_escola.setdefault(atividade.escola_id, []).append(atividade)
+    totais = {
+        item['escola']: item
+        for item in recorte['alunos'].filter(escola__in=recorte['escolas']).order_by().values('escola').annotate(
+            total=Count('pk'),
+            **{turno: Count('pk', filter=Q(turno=turno)) for turno in Aluno.Turno.values},
+        )
     }
+    lancadas = {
+        item['escola']: item
+        for item in chamadas_do_recorte(recorte).filter(
+            data=hoje, aluno__escola_id=F('escola_id'),
+        ).order_by().values('escola').annotate(
+            total=Count('pk'),
+            **{turno: Count('pk', filter=Q(aluno__turno=turno)) for turno in Aluno.Turno.values},
+        )
+    }
+    pendentes, chamadas_por_turno, cronogramas = [], {}, []
+    for escola in recorte['escolas']:
+        if atividades := atividades_por_escola.get(escola.pk):
+            cronogramas.append({'escola': escola, 'atividades': atividades})
+        total = totais.get(escola.pk, {})
+        lancada = lancadas.get(escola.pk, {})
+        faltando = total.get('total', 0) - lancada.get('total', 0)
+        if faltando > 0:
+            pendentes.append({'escola': escola, 'pendentes': faltando})
+        turnos = [
+            {'turno': turno, 'rotulo': rotulo, 'total': total.get(turno, 0),
+             'pendentes': total.get(turno, 0) - lancada.get(turno, 0)}
+            for turno, rotulo in Aluno.Turno.choices
+        ]
+        sem_turno = total.get('total', 0) - sum(item['total'] for item in turnos)
+        if sem_turno:
+            lancadas_sem_turno = lancada.get('total', 0) - sum(lancada.get(turno, 0) for turno in Aluno.Turno.values)
+            turnos.append({'turno': '', 'rotulo': 'Sem turno', 'total': sem_turno,
+                           'pendentes': sem_turno - lancadas_sem_turno})
+        chamadas_por_turno[escola.pk] = turnos
+    return {'oficinas': oficinas, 'cronogramas': cronogramas, 'chamada_pendente': pendentes,
+            'chamadas_por_turno': chamadas_por_turno}
 
 
-# ---------- Comparação entre unidades (visão geral do Diretor) ----------
-
-def por_unidade(hoje):
+def por_unidade(hoje, filtros=None):
     linhas = []
     for escola in EscolaNaica.objects.order_by('nome'):
         recorte = recorte_da_unidade(escola)
-        ocup = ocupacao(recorte)
-        freq = Chamada.objects.filter(
-            registro_aula__oficina__in=recorte['oficinas'],
-            registro_aula__data_aula__gte=hoje - timedelta(days=JANELA_DIAS),
-        ).aggregate(total=Count('id'), ok=Count('id', filter=PRESENTE_OU_JUSTIFICADA))
-        hoje_op = operacao_de_hoje(recorte, hoje)
-        linhas.append({
-            'escola': escola,
-            'alunos': recorte['alunos'].count(),
-            'cursando': ocup['cursando'],
-            'ocupacao': ocup['percentual'],
-            'vagas': ocup['vagas'],
-            'frequencia': _pct(freq['ok'], freq['total']),
-            'pendentes_hoje': len(hoje_op['chamada_pendente']),
-            'sem_monitor_hoje': len(hoje_op['sem_monitor']),
-        })
+        if filtros is not None:
+            recorte = filtros.filtrar_recorte(recorte, hoje)
+        freq = chamadas_do_recorte(recorte).filter(data__range=(hoje - timedelta(days=JANELA_DIAS), hoje)).aggregate(
+            total=Count('id'), ok=Count('id', filter=PRESENTE_OU_JUSTIFICADA))
+        operacao = operacao_de_hoje(recorte, hoje)
+        linhas.append({'escola': escola, 'alunos': recorte['alunos'].count(),
+                       'oficinas': recorte['oficinas'].filter(ativo=True, oficina__arquivada=False).count(),
+                       'frequencia': _pct(freq['ok'], freq['total']),
+                       'chamadas_por_turno': operacao['chamadas_por_turno'][escola.pk],
+                       'pendentes_hoje': sum(item['pendentes'] for item in operacao['chamada_pendente'])})
     return linhas
 
 
-def painel(user):
-    hoje = timezone.localdate()
+def painel(user, filtros=None, hoje=None):
+    hoje = hoje or timezone.localdate()
     recorte = recorte_do_usuario(user)
-    dados = {
-        'hoje': hoje,
-        'alunos': alunos(recorte),
-        'ocupacao': ocupacao(recorte),
-        'frequencia': frequencia(recorte, hoje),
-        'operacao': operacao_de_hoje(recorte, hoje),
-        'meta': META_FREQUENCIA,
-    }
-    if acesso.is_diretor(user) and not acesso.escola_em_foco(user):
-        dados['unidades'] = por_unidade(hoje)
+    if filtros is not None:
+        recorte = filtros.filtrar_recorte(recorte, hoje)
+    dados = {'hoje': hoje, 'alunos': alunos(recorte), 'cronograma': cronograma(recorte),
+             'frequencia': frequencia(recorte, hoje), 'operacao': operacao_de_hoje(recorte, hoje),
+             'limiar_frequencia_baixa': LIMIAR_FREQUENCIA_BAIXA,
+             'alunos_filtrados': recorte['alunos']}
+    escola_filtrada = filtros.cleaned_data.get('escola') if filtros is not None else None
+    if acesso.is_diretor(user) and not acesso.escola_em_foco(user) and not escola_filtrada:
+        dados['unidades'] = por_unidade(hoje, filtros)
     return dados

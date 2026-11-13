@@ -10,12 +10,11 @@ class MatriculasConfig(AppConfig):
         from alunos.etapas import Etapa, registrar
         from alunos.visibilidade import registrar_criterio_coordenador
 
-        # Etapa 6 do cadastro: não conta para o selo (aluno completo pode
-        # estar na fila de espera, sem matrícula).
+        # Consulta do cronograma; não exige matrícula individual em oficinas.
         registrar(Etapa(
-            6, 'Matrícula', 'matriculas:aluno',
-            lambda aluno: any(m.status == 'CURSANDO' for m in aluno.matriculas.all()),
-            conta_para_completo=False, prefetch=('matriculas',),
+            6, 'Cronograma', 'matriculas:aluno',
+            lambda aluno: bool(aluno.turno and aluno.turma),
+            conta_para_completo=False,
         ))
         # Coordenador também enxerga alunos matriculados em oficinas da unidade dele.
         registrar_criterio_coordenador(_matriculado_na_unidade)

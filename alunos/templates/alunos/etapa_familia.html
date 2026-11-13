@@ -3,8 +3,7 @@
 {% block title %}Família e emergência de {{ aluno.nome }}{% endblock %}
 
 {% block content %}
-<a href="{% url 'alunos:detalhe' aluno.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ aluno.nome }}</a>
-<h1 class="h4 mt-2 mb-3">Família e contatos de emergência</h1>
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">Família e contatos de emergência</h1></header>
 
 {% include "alunos/_etapas_nav.html" %}
 
@@ -17,10 +16,10 @@
                 <h2 class="h6 text-uppercase text-muted mb-0">Composição familiar</h2>
                 <span class="small text-muted">Opcional</span>
             </div>
-            <p class="small text-muted">Pessoas que moram com o aluno.</p>
+            <p class="small text-muted">Pessoas que moram com o atendido.</p>
             {% if pre_preenchidos %}
             <div class="alert alert-info py-2 small">
-                <i class="bi bi-info-circle"></i> Incluímos os responsáveis do aluno. Complete ocupação e renda, e remova quem não mora com ele. Nada é gravado até você clicar em Salvar.
+                <i class="bi bi-info-circle"></i> Incluímos os responsáveis do atendido. Complete ocupação e renda, e remova quem não mora com ele. Nada é gravado até você clicar em Salvar.
             </div>
             {% elif responsaveis_faltando %}
             <div class="alert alert-light border py-2 small d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -54,7 +53,7 @@
                 <h2 class="h6 text-uppercase text-muted mb-0">Contatos de emergência</h2>
                 <span class="small text-muted">Mínimo 2</span>
             </div>
-            <p class="small text-muted">Quem chamar se algo acontecer com o aluno durante a oficina.</p>
+            <p class="small text-muted">Quem chamar se algo acontecer com o atendido durante a oficina.</p>
             {{ contatos_formset.management_form }}
             {% for erro in contatos_formset.non_form_errors %}<div class="alert alert-danger py-2 small">{{ erro }}</div>{% endfor %}
             <div data-formset-linhas>

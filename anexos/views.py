@@ -66,7 +66,7 @@ class AnexosAlunoView(CadastroAlunoMixin, View):
 
 
 class AnexoMixin(CadastroAlunoMixin):
-    """Anexo só é encontrado se o aluno dele for visível para o usuário."""
+    """Anexo só é encontrado se o atendido dele for visível para o usuário."""
 
     def get_anexo(self):
         return get_object_or_404(
@@ -77,7 +77,7 @@ class AnexoMixin(CadastroAlunoMixin):
 
 
 class AnexoArquivoView(AnexoMixin, View):
-    """Entrega o arquivo (inline) só para quem pode ver o aluno. Nunca há link público."""
+    """Entrega o arquivo (inline) só para quem pode ver o atendido. Nunca há link público."""
 
     def get(self, request, anexo_pk):
         anexo = self.get_anexo()

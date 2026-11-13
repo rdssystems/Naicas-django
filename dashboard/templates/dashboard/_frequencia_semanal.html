@@ -1,0 +1,43 @@
+{% load l10n %}
+{% if grafico.tem_dados %}
+<div class="grafico-rolagem">
+    <div class="grafico-frequencia" data-grafico>
+        <svg viewBox="0 0 {{ grafico.largura }} {{ grafico.altura }}" role="img" aria-labelledby="grafico-titulo grafico-descricao">
+            <title id="grafico-titulo">Frequência por semana</title>
+            <desc id="grafico-descricao">Frequência das últimas oito semanas. A linha tracejada marca 75%. O número acima de cada bolinha soma as presenças e justificativas registradas na semana. Pontos vermelhos indicam frequência baixa. Semanas sem chamadas interrompem a linha.</desc>
+            {% for linha in grafico.linhas_grade %}
+            <line class="grade" x1="{{ grafico.esq }}" x2="{{ grafico.dir }}" y1="{{ linha.y|unlocalize }}" y2="{{ linha.y|unlocalize }}"/>
+            <text class="eixo" x="{{ grafico.esq|add:'-24' }}" y="{{ linha.y|unlocalize }}" dy=".3em" text-anchor="end">{{ linha.valor }}%</text>
+            {% endfor %}
+            <line class="referencia-frequencia" x1="{{ grafico.esq }}" x2="{{ grafico.dir }}" y1="{{ grafico.linha_75.y|unlocalize }}" y2="{{ grafico.linha_75.y|unlocalize }}"/>
+            <text class="eixo" x="{{ grafico.esq|add:'-24' }}" y="{{ grafico.linha_75.y|unlocalize }}" dy=".3em" text-anchor="end">75%</text>
+            {% for segmento in grafico.segmentos %}<polyline class="linha" points="{{ segmento }}"/>{% endfor %}
+            {% for ponto in grafico.pontos %}
+                {% if ponto.y is not None %}
+                <circle class="ponto{% if ponto.baixa %} ponto-abaixo{% endif %}" cx="{{ ponto.x|unlocalize }}" cy="{{ ponto.y|unlocalize }}" r="4"/>
+                <text class="ponto-quantidade" x="{{ ponto.x|unlocalize }}" y="{{ ponto.y|unlocalize }}" transform="translate(0 -4)" dy="-.5em" text-anchor="middle" aria-hidden="true">{{ ponto.semana.presencas }}</text>
+                {% endif %}
+                <text class="eixo" x="{{ ponto.x|unlocalize }}" y="{{ grafico.base_y|add:'30' }}" text-anchor="middle">{{ ponto.rotulo }}</text>
+            {% endfor %}
+            <line class="mira" y1="0" y2="{{ grafico.base_y }}" visibility="hidden"/>
+            {% for ponto in grafico.pontos %}
+            <rect class="alvo" x="{{ ponto.x|unlocalize }}" y="0" width="1" height="{{ grafico.base_y }}" tabindex="0" role="img"
+                  data-x="{{ ponto.x|unlocalize }}" data-meia="{{ grafico.meia_coluna|unlocalize }}"
+                  data-texto="Semana de {{ ponto.rotulo }}: {% if ponto.semana.percentual is not None %}{{ ponto.semana.percentual }}% · Presenças e justificativas: {{ ponto.semana.presencas }} · Registros de chamada: {{ ponto.semana.chamadas }}{% else %}sem chamadas{% endif %}"
+                  aria-label="Semana de {{ ponto.rotulo }}: {% if ponto.semana.percentual is not None %}{{ ponto.semana.percentual }}%. Presenças e justificativas: {{ ponto.semana.presencas }}. Registros de chamada: {{ ponto.semana.chamadas }}{% else %}sem chamadas{% endif %}"/>
+            {% endfor %}
+        </svg>
+        <div class="grafico-dica" hidden></div>
+    </div>
+</div>
+<details class="small mt-3">
+    <summary class="painel-detalhes">Ver dados por semana</summary>
+    <div class="table-responsive mt-2"><table class="table table-sm mb-0">
+        <caption class="visually-hidden">Dados do gráfico de frequência semanal</caption>
+        <thead><tr><th>Semana de</th><th class="text-end">Frequência</th><th class="text-end">Presenças e justificativas</th><th class="text-end">Registros de chamada</th></tr></thead>
+        <tbody>{% for ponto in grafico.pontos %}<tr><td>{{ ponto.rotulo }}</td><td class="text-end">{% if ponto.semana.percentual is not None %}{{ ponto.semana.percentual }}%{% else %}—{% endif %}</td><td class="text-end">{% if ponto.semana.percentual is not None %}{{ ponto.semana.presencas }}{% else %}—{% endif %}</td><td class="text-end">{{ ponto.semana.chamadas }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+</details>
+{% else %}
+<p class="small text-muted mb-0">O gráfico aparece quando houver chamadas gerais nas últimas 8 semanas.</p>
+{% endif %}

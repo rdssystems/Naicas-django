@@ -1,11 +1,11 @@
 """
-Registro das etapas do cadastro do aluno.
+Registro das etapas do cadastro do atendido.
 
-As etapas 1-4 são do próprio app alunos. As etapas 5 (anexos) e 6 (matrícula)
+As etapas 1-4 são do próprio app alunos. As etapas 5 (anexos) e 6 (cronograma)
 são registradas pelos apps delas no AppConfig.ready(), para que alunos não
 precise importar esses apps (dependência numa só direção: eles -> alunos).
 
-Este módulo não importa models: as funções `concluida` recebem o aluno.
+Este módulo não importa models: as funções `concluida` recebem o atendido.
 """
 
 from dataclasses import dataclass
@@ -13,12 +13,12 @@ from typing import Callable
 
 # Nome exibido enquanto o app da etapa não estiver instalado/registrado.
 NOMES_PADRAO = {
-    1: 'Dados do aluno',
+    1: 'Dados do atendido',
     2: 'Responsável',
     3: 'Família e emergência',
     4: 'Saúde',
     5: 'Anexos',
-    6: 'Matrícula',
+    6: 'Cronograma',
 }
 
 
@@ -71,7 +71,7 @@ def etapas_pendentes(aluno):
 
 def registrar_etapas_do_cadastro():
     """Etapas 1-4 (chamado no AlunosConfig.ready)."""
-    registrar(Etapa(1, 'Dados do aluno', 'alunos:etapa_dados', lambda a: hasattr(a, 'endereco')))
+    registrar(Etapa(1, 'Dados do atendido', 'alunos:etapa_dados', lambda a: hasattr(a, 'endereco')))
     registrar(Etapa(
         2, 'Responsável', 'alunos:etapa_responsaveis', lambda a: bool(a.responsaveis_vinculos.all()),
         prefetch=('responsaveis_vinculos',),

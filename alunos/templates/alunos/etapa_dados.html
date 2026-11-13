@@ -1,10 +1,9 @@
 {% extends "core/base.html" %}
 
-{% block title %}{% if aluno %}Dados de {{ aluno.nome }}{% else %}Novo aluno{% endif %}{% endblock %}
+{% block title %}{% if aluno %}Dados de {{ aluno.nome }}{% else %}Novo atendido{% endif %}{% endblock %}
 
 {% block content %}
-<a href="{% if aluno %}{% url 'alunos:detalhe' aluno.pk %}{% else %}{% url 'alunos:lista' %}{% endif %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {% if aluno %}{{ aluno.nome }}{% else %}Alunos{% endif %}</a>
-<h1 class="h4 mt-2 mb-3">{% if aluno %}Dados do aluno{% else %}Novo aluno{% endif %}</h1>
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">{% if aluno %}Dados do atendido{% else %}Novo atendido{% endif %}</h1></header>
 
 {% include "alunos/_etapas_nav.html" %}
 
@@ -24,6 +23,8 @@
             <h2 class="h6 text-uppercase text-muted mb-3">Identificação</h2>
             <div class="row">
                 {% if form.escola %}<div class="col-md-6">{% include "core/_campo.html" with field=form.escola %}</div>{% endif %}
+                <div class="col-md-3">{% include "core/_campo.html" with field=form.turno %}</div>
+                <div class="col-md-3">{% include "core/_campo.html" with field=form.turma %}</div>
                 <div class="col-md-6">{% include "core/_campo.html" with field=form.cpf %}</div>
                 <div class="col-md-6">{% include "core/_campo.html" with field=form.nome %}</div>
                 <div class="col-md-6">{% include "core/_campo.html" with field=form.nome_mae %}</div>

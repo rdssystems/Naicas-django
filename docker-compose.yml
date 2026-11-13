@@ -28,13 +28,16 @@ services:
       - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
-    # Padrão: só esta máquina (127.0.0.1). Para outros aparelhos da rede
-    # (ou o Tailscale) acessarem, defina WEB_BIND=0.0.0.0 no .env.
+    # Acesso pela rede local por padrão. Na VPS atrás de proxy/Tailscale,
+    # defina WEB_BIND=127.0.0.1 no .env para limitar à própria máquina.
     ports:
-      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8020}:8000"
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8020}:8000"
     env_file:
       - .env
     environment:
+      # Nome do notebook na rede, preservando os hosts/origens do .env.
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1},isaque
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost:8020,http://127.0.0.1:8020},http://isaque:${WEB_PORT:-8020}
       - DB_ENGINE=django.db.backends.postgresql
       - DB_HOST=db
       - DB_PORT=5432

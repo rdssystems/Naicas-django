@@ -1,19 +1,19 @@
 {% extends "core/base.html" %}
 {% load naicas %}
 
-{% block title %}Alunos{% endblock %}
+{% block title %}Atendidos{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="cabecalho-pagina d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h4 mb-0">Alunos</h1>
+        <h1 class="h4 mb-0">Atendidos</h1>
         {% if active_escola %}<div class="small text-muted">{{ active_escola }}</div>{% endif %}
     </div>
-    <a href="{% url 'alunos:criar' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Novo aluno</a>
+    <a href="{% url 'alunos:criar' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Novo atendido</a>
 </div>
 
-<form method="get" class="row g-2 mb-3">
-    <div class="col-md-6">
+<form method="get" class="filtros-pagina row g-2 mb-3">
+    <div class="col-md-4">
         <input type="search" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Buscar por nome, nome da mãe ou CPF">
     </div>
     {% if escolas %}
@@ -26,21 +26,47 @@
         </select>
     </div>
     {% endif %}
-    <div class="col-4 col-md-2 d-grid">
+    <div class="col-6 col-md-2">
+        <select name="turno" class="form-select">
+            <option value="">Todos os turnos</option>
+            {% for valor, rotulo in turnos %}<option value="{{ valor }}" {% if request.GET.turno == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-2">
+        <select name="turma" class="form-select">
+            <option value="">Todas as turmas</option>
+            {% for valor, rotulo in turmas %}<option value="{{ valor }}" {% if request.GET.turma == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-2 d-grid">
+        <select name="status" class="form-select" aria-label="Status do atendido">
+            <option value="">Todos os status</option>
+            {% for valor, rotulo in status_opcoes %}<option value="{{ valor }}" {% if request.GET.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="col-6 col-md-2 d-grid">
         <button type="submit" class="btn btn-outline-secondary">Buscar</button>
     </div>
 </form>
+<p class="small text-muted mb-3">{{ totais_status.ativos }} atendido(s) ativo(s) · {{ totais_status.inativos }} inativo(s). Inativos aparecem ao final da listagem e não entram na contagem geral de atendidos.</p>
+{% if alunos_pendentes_classificacao %}
+<div class="alert alert-warning py-2 small">{{ alunos_pendentes_classificacao }} atendido(s) sem turno ou turma. <a href="?classificacao=pendente" class="alert-link">Ver pendentes de classificação</a>.</div>
+{% endif %}
 
 <div class="card shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Aluno</th>
+                    <th>Atendido</th>
                     <th>CPF</th>
                     <th>Nascimento</th>
+                    <th>Turno</th>
+                    <th>Turma</th>
                     {% if is_diretor and not escola_em_foco %}<th>Unidade</th>{% endif %}
                     <th>Cadastro</th>
+                    <th>Status</th>
+                    <th class="text-end">Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -52,14 +78,18 @@
                     </td>
                     <td class="text-nowrap">{{ aluno.cpf|cpf }}</td>
                     <td>{{ aluno.data_nascimento|date:"d/m/Y" }}</td>
+                    <td>{% if aluno.turno %}{{ aluno.get_turno_display }}{% else %}<span class="badge text-bg-warning">Pendente</span>{% endif %}</td>
+                    <td>{% if aluno.turma %}{{ aluno.get_turma_display }}{% else %}<span class="badge text-bg-warning">Pendente</span>{% endif %}</td>
                     {% if is_diretor and not escola_em_foco %}<td>{{ aluno.escola }}</td>{% endif %}
                     <td>
                         {% if aluno.cadastro_completo %}<span class="badge text-bg-success">Completo</span>
                         {% else %}<span class="badge text-bg-warning">Incompleto</span>{% endif %}
                     </td>
+                    <td>{% include "alunos/_status_badge.html" %}</td>
+                    <td class="text-end"><a href="{% url 'alunos:detalhe' aluno.pk %}" class="btn btn-sm btn-outline-primary" aria-label="Visualizar ficha de {{ aluno.nome }}">Ficha</a></td>
                 </tr>
             {% empty %}
-                <tr><td colspan="5" class="text-center text-muted py-4">Nenhum aluno encontrado.</td></tr>
+                <tr><td colspan="{% if is_diretor and not escola_em_foco %}9{% else %}8{% endif %}" class="text-center text-muted py-4">Nenhum atendido encontrado.</td></tr>
             {% endfor %}
             </tbody>
         </table>

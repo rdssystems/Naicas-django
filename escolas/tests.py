@@ -69,7 +69,7 @@ class FocoNaUnidadeTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        from oficinas.models import TipoOficina
+        from oficinas.tests import criar_tag
         from oficinas.tests import criar_oficina
         from alunos.tests import criar_aluno
 
@@ -78,8 +78,8 @@ class FocoNaUnidadeTests(TestCase):
         cls.diretor = criar_usuario('diretor', NivelAcesso.DIRETOR)
         cls.coord = criar_usuario('coord', NivelAcesso.COORDENADOR, cls.canaa)
         cls.monitor = criar_usuario('monitor', NivelAcesso.MONITOR)
-        cls.oficina_canaa = criar_oficina(TipoOficina.objects.create(escola=cls.canaa, nome='Dança'), 'Dança')
-        cls.oficina_norte = criar_oficina(TipoOficina.objects.create(escola=cls.norte, nome='Música'), 'Violão')
+        cls.oficina_canaa = criar_oficina(criar_tag(escola=cls.canaa, nome='Dança'), 'Dança')
+        cls.oficina_norte = criar_oficina(criar_tag(escola=cls.norte, nome='Música'), 'Violão')
         cls.aluno_canaa = criar_aluno(cls.canaa, 950000001, 'Ana')
         cls.aluno_norte = criar_aluno(cls.norte, 950000002, 'Bruno')
 
@@ -90,15 +90,25 @@ class FocoNaUnidadeTests(TestCase):
     def nomes(self, url, chave):
         return {str(o) for o in self.client.get(url).context[chave]}
 
+    def nomes_cronograma(self):
+        # A consulta do Diretor agora exige Naica e Turno; o foco deve
+        # continuar prevalecendo mesmo ao consultar as outras unidades.
+        nomes = set()
+        for escola in (self.canaa, self.norte):
+            agenda = self.client.get(reverse('escalas:grade'), {
+                'escola': escola.pk, 'turno': 'MANHA',
+            }).context['agenda']
+            nomes.update(b['oficina'].nome for coluna in agenda['colunas'] for b in coluna['blocos'])
+        return nomes
     def test_visao_geral_mostra_tudo_e_marca_naicas(self):
         self.client.force_login(self.diretor)
-        self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança', 'Violão'})
+        self.assertEqual(self.nomes_cronograma(), {'Dança', 'Violão'})
         self.assertEqual(self.nomes(reverse('alunos:lista'), 'alunos'), {'Ana', 'Bruno'})
         self.assertContains(self.client.get(reverse('core:home')), '<span class="fita">Naicas</span>')
 
     def test_dentro_da_unidade_filtra_e_mostra_o_nome_na_barra(self):
         self.assertRedirects(self.entrar(self.canaa), reverse('dashboard:painel'))  # Dashboard é a página principal do Diretor
-        self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança'})
+        self.assertEqual(self.nomes_cronograma(), {'Dança'})
         self.assertEqual(self.nomes(reverse('alunos:lista'), 'alunos'), {'Ana'})
         response = self.client.get(reverse('core:home'))
         self.assertContains(response, '<span class="fita">Naica Teste</span>')
@@ -112,7 +122,7 @@ class FocoNaUnidadeTests(TestCase):
     def test_voltar_a_visao_geral(self):
         self.entrar(self.canaa)
         self.entrar(None)
-        self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança', 'Violão'})
+        self.assertEqual(self.nomes_cronograma(), {'Dança', 'Violão'})
 
     def test_unidade_nova_aparece_no_seletor_automaticamente(self):
         self.client.force_login(self.diretor)
@@ -129,7 +139,7 @@ class FocoNaUnidadeTests(TestCase):
         sessao = self.client.session
         sessao[CHAVE_SESSAO] = self.norte.pk
         sessao.save()
-        self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança'})
+        self.assertEqual(self.nomes_cronograma(), {'Dança'})
         self.assertContains(self.client.get(reverse('core:home')), '<span class="fita">Naica Teste</span>')
 
     def test_unidade_inexistente_ou_invalida(self):
@@ -142,7 +152,7 @@ class FocoNaUnidadeTests(TestCase):
         temporaria = EscolaNaica.objects.create(nome='Temporária')
         self.entrar(temporaria)
         temporaria.delete()
-        self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Dança', 'Violão'})
+        self.assertEqual(self.nomes_cronograma(), {'Dança', 'Violão'})
 
     def test_novo_aluno_vem_com_a_unidade_em_foco(self):
         self.entrar(self.norte)
@@ -152,7 +162,7 @@ class FocoNaUnidadeTests(TestCase):
     def test_so_admin_e_diretor_entram_em_unidades(self):
         superuser = User.objects.create_superuser('admin', password='x')  # sem Profile: tratado como Diretor
         self.assertRedirects(self.entrar(self.norte, user=superuser), reverse('dashboard:painel'))
-        self.assertEqual(self.nomes(reverse('oficinas:lista'), 'oficinas'), {'Violão'})
+        self.assertEqual(self.nomes_cronograma(), {'Violão'})
         for user in (self.coord, self.monitor):
             self.assertEqual(self.entrar(self.norte, user=user).status_code, 403, user)
             response = self.client.get(reverse('core:home'))

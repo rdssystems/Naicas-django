@@ -32,9 +32,10 @@ def criar_usuario(username, nivel, escola=None):
     return user
 
 
-def criar_aluno(escola, base9, nome='Aluno', com_endereco=True):
+def criar_aluno(escola, base9, nome='Atendido', com_endereco=True):
     aluno = Aluno.objects.create(
-        escola=escola, cpf=gerar_cpf(base9), nome=nome, nome_mae='Mãe', data_nascimento=date(2015, 5, 10),
+        escola=escola, turno=Aluno.Turno.MANHA, turma=Aluno.Turma.A,
+        cpf=gerar_cpf(base9), nome=nome, nome_mae='Mãe', data_nascimento=date(2015, 5, 10),
         sexo='F', naturalidade='Recife/PE', nome_escola='EM Teste', ano_escolar='EF5',
     )
     if com_endereco:
@@ -129,10 +130,67 @@ class VisibilidadeTests(BaseAlunosTestCase):
                 self.assertEqual(self.client.get(url).status_code, 200, (user, url))
 
 
+class OcorrenciaTests(BaseAlunosTestCase):
+    def test_diretor_registra_ocorrencia(self):
+        self.client.force_login(self.diretor)
+        url = reverse('alunos:detalhe', args=[self.aluno_a.pk])
+
+        response = self.client.post(url, {'descricao': 'Situação observada pela direção.'})
+
+        self.assertRedirects(response, url)
+        self.assertEqual(self.aluno_a.ocorrencias.get().autor, self.diretor)
+
+    def test_coordenador_registra_e_consulta_ocorrencias_com_autor_e_data(self):
+        self.client.force_login(self.coord_a)
+        url = reverse('alunos:detalhe', args=[self.aluno_a.pk])
+        response = self.client.post(url, {'descricao': 'Atendido passou mal durante a atividade.'})
+
+        self.assertRedirects(response, url)
+        ocorrencia = self.aluno_a.ocorrencias.get()
+        self.assertEqual(ocorrencia.autor, self.coord_a)
+        self.assertEqual(ocorrencia.data, date.today())
+        self.assertEqual(ocorrencia.descricao, 'Atendido passou mal durante a atividade.')
+
+        response = self.client.get(url)
+        self.assertContains(response, 'Atendido passou mal durante a atividade.')
+        self.assertContains(response, self.coord_a.get_full_name() or self.coord_a.username)
+
+    def test_historico_mostra_registros_em_ordem_cronologica(self):
+        from .models import Ocorrencia
+
+        antiga = Ocorrencia.objects.create(aluno=self.aluno_a, descricao='Primeira situação.', autor=self.coord_a)
+        recente = Ocorrencia.objects.create(aluno=self.aluno_a, descricao='Segunda situação.', autor=self.coord_a)
+        self.client.force_login(self.diretor)
+        response = self.client.get(reverse('alunos:detalhe', args=[self.aluno_a.pk]))
+
+        itens = list(response.context['ocorrencias'])
+        self.assertEqual(itens, [antiga, recente])
+
+    def test_coordenador_nao_registra_ocorrencia_para_aluno_de_outra_unidade(self):
+        self.client.force_login(self.coord_a)
+        url = reverse('alunos:detalhe', args=[self.aluno_b.pk])
+        self.assertEqual(self.client.post(url, {'descricao': 'Tentativa.'}).status_code, 404)
+        self.assertFalse(self.aluno_b.ocorrencias.exists())
+
+    def test_monitor_nao_acessa_registro_de_ocorrencias(self):
+        self.client.force_login(self.monitor)
+        url = reverse('alunos:detalhe', args=[self.aluno_a.pk])
+        self.assertEqual(self.client.post(url, {'descricao': 'Tentativa.'}).status_code, 403)
+        self.assertFalse(self.aluno_a.ocorrencias.exists())
+
+    def test_descricao_e_obrigatoria(self):
+        self.client.force_login(self.coord_a)
+        response = self.client.post(reverse('alunos:detalhe', args=[self.aluno_a.pk]), {'descricao': '  '})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.aluno_a.ocorrencias.exists())
+        self.assertContains(response, 'Este campo é obrigatório.')
+
+
 class EtapaDadosTests(BaseAlunosTestCase):
     def dados(self, cpf, **kwargs):
         base = {
             'cpf': formatar(cpf), 'nome': 'Carla', 'nome_mae': 'Joana', 'data_nascimento': '2014-02-03',
+            'turno': Aluno.Turno.MANHA, 'turma': Aluno.Turma.A,
             'sexo': 'F', 'naturalidade': 'Olinda/PE', 'nis': '', 'nome_escola': 'EM X', 'ano_escolar': 'EF6',
             'end-cep': '50.000-000', 'end-logradouro': 'Rua B', 'end-numero': '', 'end-complemento': '',
             'end-bairro': 'Boa Vista', 'end-cidade': 'Recife', 'end-estado': 'PE',
@@ -147,6 +205,7 @@ class EtapaDadosTests(BaseAlunosTestCase):
         aluno = Aluno.objects.get(cpf=cpf)
         self.assertRedirects(response, reverse('alunos:etapa_responsaveis', args=[aluno.pk]))
         self.assertEqual(aluno.escola, self.escola_a)
+        self.assertEqual((aluno.turno, aluno.turma), (Aluno.Turno.MANHA, Aluno.Turma.A))
         self.assertEqual(aluno.criado_por, self.coord_a)
         self.assertEqual(aluno.endereco.cep, '50000000')
         self.assertFalse(aluno.cadastro_completo)  # falta responsável
@@ -169,6 +228,20 @@ class EtapaDadosTests(BaseAlunosTestCase):
         form = AlunoForm(data=self.dados('12345678900'), user=self.coord_a)
         self.assertFalse(form.is_valid())
         self.assertIn('cpf', form.errors)
+
+    def test_novo_cadastro_exige_turno_e_turma(self):
+        dados = self.dados(gerar_cpf(300000005), turno='', turma='')
+        form = AlunoForm(data=dados, user=self.coord_a)
+        self.assertFalse(form.is_valid())
+        self.assertIn('turno', form.errors)
+        self.assertIn('turma', form.errors)
+
+    def test_alunos_antigos_sem_classificacao_aparecem_como_pendentes(self):
+        Aluno.objects.filter(pk=self.aluno_a.pk).update(turno=None, turma=None)
+        self.client.force_login(self.coord_a)
+        response = self.client.get(reverse('alunos:lista'), {'classificacao': 'pendente'})
+        self.assertEqual(list(response.context['alunos']), [self.aluno_a])
+        self.assertContains(response, 'Pendente')
 
     def test_cpf_de_outra_unidade_avisa_sem_mostrar(self):
         self.client.force_login(self.coord_a)
@@ -416,7 +489,7 @@ class PreenchimentoResponsaveisTests(BaseAlunosTestCase):
     def test_primeira_visita_traz_os_responsaveis(self):
         response = self.client.get(self.url)
         self.assertEqual(self.linhas_iniciais(response), [('Joana Mãe', 'MAE'), ('Carlos Pai', 'PAI')])
-        self.assertContains(response, 'Incluímos os responsáveis do aluno')
+        self.assertContains(response, 'Incluímos os responsáveis do atendido')
 
     def test_depois_de_salva_nao_reinsere_quem_foi_removido(self):
         MembroFamiliar.objects.create(aluno=self.aluno_a, responsavel=self.mae, nome='Joana Mãe', parentesco='MAE')
@@ -593,12 +666,12 @@ class PopularDemoCommandTests(TestCase):
         import tempfile
         from io import StringIO
 
-        from django.core.management import CommandError, call_command
+        from django.core.management import call_command
         from django.test import override_settings
 
-        from frequencia.models import Chamada
+        from frequencia.models import ChamadaGeral
         from matriculas.models import Matricula
-        from oficinas.models import Oficina
+        from oficinas.models import AtividadeCronograma, Oficina
 
         unidade = EscolaNaica.objects.order_by('pk').first()
         EscolaNaica.objects.exclude(pk=unidade.pk).delete()  # só uma unidade: teste rápido
@@ -606,9 +679,15 @@ class PopularDemoCommandTests(TestCase):
         self.addCleanup(shutil.rmtree, media, True)
         with override_settings(DEBUG=True, MEDIA_ROOT=media):
             call_command('popular_demo', seed=1, stdout=StringIO())
-            self.assertEqual(Aluno.objects.filter(escola=unidade).count(), 30)
-            self.assertEqual(Oficina.objects.filter(escola=unidade, nome__startswith='[DEMO]').count(), 5)
-            self.assertEqual(Matricula.objects.filter(escola=unidade).count(), 60)
-            self.assertTrue(Chamada.objects.exists())
-            with self.assertRaises(CommandError):
-                call_command('popular_demo', seed=1, stdout=StringIO())
+            total_alunos = Aluno.objects.filter(escola=unidade).count()
+            self.assertGreaterEqual(total_alunos, 35)
+            self.assertLessEqual(total_alunos, 45)
+            self.assertEqual(AtividadeCronograma.objects.filter(escola=unidade, dados_legados__demo=True).count(), 5)
+            total_matriculas = Matricula.objects.filter(escola=unidade).count()
+            self.assertEqual(total_matriculas, 0)
+            self.assertFalse(AtividadeCronograma.objects.filter(escola=unidade, turmas=[]).exists())
+            self.assertFalse(Aluno.objects.filter(escola=unidade, turno__isnull=True).exists())
+            self.assertFalse(Aluno.objects.filter(escola=unidade, turma__isnull=True).exists())
+            self.assertTrue(ChamadaGeral.objects.exists())
+            call_command('popular_demo', seed=1, stdout=StringIO())
+            self.assertEqual(Aluno.objects.filter(escola=unidade).count(), total_alunos)

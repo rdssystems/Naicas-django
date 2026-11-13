@@ -28,7 +28,7 @@ def caminho_anexo(instance, filename):
 
 
 class Anexo(models.Model):
-    aluno = models.ForeignKey('alunos.Aluno', on_delete=models.CASCADE, related_name='anexos')
+    aluno = models.ForeignKey('alunos.Aluno', verbose_name='atendido', on_delete=models.CASCADE, related_name='anexos')
     tipo_documento = models.ForeignKey(
         TipoDocumento, verbose_name='tipo de documento', on_delete=models.PROTECT, related_name='anexos',
     )

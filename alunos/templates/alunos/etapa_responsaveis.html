@@ -4,8 +4,7 @@
 {% block title %}Responsáveis de {{ aluno.nome }}{% endblock %}
 
 {% block content %}
-<a href="{% url 'alunos:detalhe' aluno.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ aluno.nome }}</a>
-<h1 class="h4 mt-2 mb-3">Responsáveis</h1>
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">Responsáveis</h1></header>
 
 {% include "alunos/_etapas_nav.html" %}
 
@@ -22,7 +21,7 @@
                     <a href="{% url 'alunos:responsavel_editar' aluno.pk vinculo.pk %}" class="btn btn-sm btn-outline-primary" title="Editar"><i class="bi bi-pencil"></i></a>
                     <form method="post" action="{% url 'alunos:responsavel_remover' aluno.pk vinculo.pk %}" class="d-inline">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Remover vínculo" onclick="return confirm('Remover {{ vinculo.responsavel.nome|escapejs }} como responsável deste aluno? O cadastro da pessoa continua no sistema.');"><i class="bi bi-x-lg"></i></button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Remover vínculo" onclick="return confirm('Remover {{ vinculo.responsavel.nome|escapejs }} como responsável deste atendido? O cadastro da pessoa continua no sistema.');"><i class="bi bi-x-lg"></i></button>
                     </form>
                 </div>
             </div>
@@ -35,12 +34,12 @@
 <div class="card shadow-sm">
     <div class="card-body">
         <h2 class="h5 mb-1">Adicionar responsável</h2>
-        <p class="small text-muted">Comece pelo CPF: se a pessoa já for responsável por outro aluno da rede (ex.: um irmão), os dados são preenchidos automaticamente.</p>
+        <p class="small text-muted">Comece pelo CPF: se a pessoa já for responsável por outro atendido da rede (ex.: um irmão), os dados são preenchidos automaticamente.</p>
         <form method="post" id="form_responsavel" novalidate>
             {% csrf_token %}
             {% include "alunos/_responsavel_campos.html" %}
             <div class="d-flex justify-content-end gap-2">
-                <a href="{% url 'alunos:detalhe' aluno.pk %}" class="btn btn-outline-secondary">Voltar ao aluno</a>
+                <a href="{% url 'alunos:detalhe' aluno.pk %}" class="btn btn-outline-secondary acao-retorno">Voltar ao atendido</a>
                 <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Adicionar responsável</button>
             </div>
         </form>

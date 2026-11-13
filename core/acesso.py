@@ -98,15 +98,15 @@ def filtrar_por_escola(user, queryset, campo='escola'):
     """
     if is_diretor(user):
         foco = escola_em_foco(user)
-        return queryset.filter(**{campo: foco}) if foco else queryset
+        return queryset.filter(**{campo: foco.pk}) if foco else queryset
     if is_coordenador(user):
-        return queryset.filter(**{campo: escola_do_usuario(user)})
+        return queryset.filter(**{campo: escola_do_usuario(user).pk})
     return queryset.none()
 
 
 def filtrar_oficinas_visiveis(user, queryset):
     """
-    Oficinas que o usuário pode ver: Diretor todas, Coordenador as da própria
+    Atividades do cronograma: Diretor todas, Coordenador as da própria
     unidade, Monitor só as em que está designado (de qualquer unidade).
     """
     if is_monitor(user):
@@ -132,7 +132,7 @@ def pode_ver_saude_emergencia(user):
 
 def pode_acessar_oficina(user, oficina):
     """
-    Lançar chamada / ver matriculados de uma oficina: Diretor, Coordenador da
+    Consultar o cronograma de uma oficina: Diretor, Coordenador da
     unidade da oficina, ou Monitor designado nela (de qualquer unidade).
     """
     if is_diretor(user):

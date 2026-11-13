@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
-from oficinas.models import Oficina
+from oficinas.models import AtividadeCronograma
 
 
 class Matricula(models.Model):
@@ -12,14 +12,14 @@ class Matricula(models.Model):
         DESISTENTE = 'DESISTENTE', 'Desistente'
 
     # PROTECT: matrícula é histórico (frequência vai apontar para ela).
-    aluno = models.ForeignKey('alunos.Aluno', on_delete=models.PROTECT, related_name='matriculas')
-    oficina = models.ForeignKey(Oficina, on_delete=models.PROTECT, related_name='matriculas')
+    aluno = models.ForeignKey('alunos.Aluno', verbose_name='atendido', on_delete=models.PROTECT, related_name='matriculas')
+    oficina = models.ForeignKey(AtividadeCronograma, on_delete=models.PROTECT, related_name='matriculas')
     # Copiados da oficina no momento da matrícula (histórico).
     escola = models.ForeignKey(
         'escolas.EscolaNaica', verbose_name='unidade de atendimento', on_delete=models.PROTECT,
         related_name='matriculas', editable=False,
     )
-    turno = models.CharField('turno', max_length=10, choices=Oficina.Turno.choices, editable=False)
+    turno = models.CharField('turno', max_length=10, choices=AtividadeCronograma.Turno.choices, editable=False)
 
     data_inscricao = models.DateField('data de inscrição', auto_now_add=True)
     status = models.CharField('situação', max_length=20, choices=Status.choices, default=Status.CURSANDO)
@@ -38,7 +38,7 @@ class Matricula(models.Model):
             models.UniqueConstraint(
                 fields=['aluno', 'oficina'], condition=Q(status='CURSANDO'),
                 name='matricula_cursando_unica_por_oficina',
-                violation_error_message='O aluno já está cursando esta oficina.',
+                violation_error_message='O atendido já está cursando esta oficina.',
             ),
             models.CheckConstraint(
                 condition=(

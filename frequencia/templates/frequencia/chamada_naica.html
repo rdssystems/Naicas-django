@@ -1,0 +1,100 @@
+{% extends "core/base.html" %}
+
+{% block title %}Chamada geral · Naicas{% endblock %}
+
+{% block content %}
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">Chamada geral da Naica</h1></header>
+<p class="text-muted">Uma presença por atendido e dia na unidade, com atendidos agrupados por turno e turma.</p>
+
+{% if erro %}<div class="alert alert-danger">{{ erro }}</div>{% endif %}
+
+<form method="get" class="card shadow-sm mb-3">
+    <div class="card-body row g-2 align-items-end">
+        {% if is_diretor and not escola_em_foco %}
+        <div class="col-md-4">
+            <label class="form-label small" for="escola">Naica</label>
+            <select name="escola" id="escola" class="form-select" required>
+                <option value="">Selecione uma unidade</option>
+                {% for unidade in escolas %}<option value="{{ unidade.pk }}" {% if escola.pk == unidade.pk %}selected{% endif %}>{{ unidade.nome }}</option>{% endfor %}
+            </select>
+        </div>
+        {% else %}<div class="col-md-4"><div class="small text-muted">Naica</div><div class="fw-semibold">{{ escola.nome }}</div></div>{% endif %}
+        <div class="col-md-3">
+            <label class="form-label small" for="data">Data da chamada</label>
+            <input type="date" name="data" id="data" class="form-control" value="{{ data|date:'Y-m-d' }}" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small" for="turno">Turno</label>
+            <select name="turno" id="turno" class="form-select">
+                <option value="">Manhã e tarde</option>
+                <option value="MANHA" {% if turno == 'MANHA' %}selected{% endif %}>Manhã</option>
+                <option value="TARDE" {% if turno == 'TARDE' %}selected{% endif %}>Tarde</option>
+            </select>
+        </div>
+        <div class="col-md-auto d-grid"><button class="btn btn-outline-primary" type="submit"><i class="bi bi-calendar-check"></i> Abrir chamada</button></div>
+    </div>
+</form>
+
+{% if escola and grupos or escola and not erro %}
+    {% if grupos %}
+    <form method="post" id="form_chamada_naica">
+        {% csrf_token %}
+        <input type="hidden" name="escola" value="{{ escola.pk }}">
+        <input type="hidden" name="data" value="{{ data|date:'Y-m-d' }}">
+        <input type="hidden" name="turno" value="{{ turno }}">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small text-muted">{{ total_alunos }} atendido{{ total_alunos|pluralize }}</span>
+            <button type="button" class="btn btn-sm btn-outline-success" id="todos_presentes"><i class="bi bi-check-all"></i> Todos presentes</button>
+        </div>
+        {% for grupo in grupos %}
+        <section class="card shadow-sm mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="h6 mb-0">{{ grupo.turno_label }} · {{ grupo.turma_label }}</h2>
+                <span class="badge text-bg-light border">{{ grupo.alunos|length }} atendido{{ grupo.alunos|length|pluralize }}</span>
+            </div>
+            <ul class="list-group list-group-flush">
+            {% for item in grupo.alunos %}
+                <li class="list-group-item py-3">
+                    <div class="fw-semibold mb-2">{{ item.aluno.nome }}</div>
+                        {% with aluno=item.aluno atual=item.chamada.status_presenca %}
+                        {% if item.revisar %}<div class="alert alert-warning small py-2">O histórico deste atendido tem presenças divergentes entre oficinas. Revise a presença deste dia.</div>{% endif %}
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-4">
+                                <div class="btn-group grupo-presenca" role="group" aria-label="Presença de {{ aluno.nome }}">
+                                    {% for valor, rotulo in presencas %}
+                                    <input type="radio" class="btn-check" name="presenca_{{ aluno.pk }}" id="p_{{ aluno.pk }}_{{ valor }}" value="{{ valor }}" autocomplete="off" required {% if atual == valor or not item.chamada and valor == 'P' %}checked{% endif %}>
+                                    <label class="btn {% if valor == 'P' %}btn-outline-success{% elif valor == 'F' %}btn-outline-danger{% else %}btn-outline-warning{% endif %} px-3" for="p_{{ aluno.pk }}_{{ valor }}" title="{{ rotulo }}">{{ valor }}</label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-8" {% if not item.chamada.observacoes %}data-mostrar-se="presenca_{{ aluno.pk }}=F|J"{% endif %}>
+                                <input type="text" name="obs_{{ aluno.pk }}" value="{{ item.chamada.observacoes|default:'' }}" maxlength="255" class="form-control form-control-sm" placeholder="Observação da presença" aria-label="Observação de {{ aluno.nome }}">
+                            </div>
+                        </div>
+                        {% endwith %}
+                </li>
+            {% endfor %}
+            </ul>
+        </section>
+        {% endfor %}
+        <div class="d-flex justify-content-end"><button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Salvar chamada geral</button></div>
+    </form>
+    {% else %}
+    <div class="alert alert-light border">Não há atendidos cadastrados nesta Naica para o turno selecionado.</div>
+    {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% include "core/_condicionais_js.html" %}
+<script>
+    (function () {
+        const botao = document.getElementById('todos_presentes');
+        if (!botao) return;
+        botao.addEventListener('click', function () {
+            document.querySelectorAll('#form_chamada_naica input.btn-check[value="P"]').forEach(function (radio) { radio.checked = true; });
+            document.getElementById('form_chamada_naica').dispatchEvent(new Event('change', {bubbles: true}));
+        });
+    })();
+</script>
+{% endblock %}

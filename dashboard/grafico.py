@@ -3,11 +3,11 @@ Geometria do gráfico de frequência semanal (SVG desenhado no template).
 Semana sem chamada lançada não vira 0%: a linha é interrompida ali.
 """
 
-LARGURA, ALTURA = 640, 220
-ESQ, DIR, TOPO, BASE = 40, 16, 12, 30  # margens internas (rótulos dos eixos)
+LARGURA, ALTURA = 640, 250
+ESQ, DIR, TOPO, BASE = 52, 24, 48, 42  # espaço para os números acima dos pontos e os eixos
 
 
-def frequencia_semanal(semanas, meta):
+def frequencia_semanal(semanas, limiar_frequencia_baixa):
     area_l = LARGURA - ESQ - DIR
     area_a = ALTURA - TOPO - BASE
     passo = area_l / max(len(semanas) - 1, 1)
@@ -25,7 +25,8 @@ def frequencia_semanal(semanas, meta):
             atual = []
             pontos.append({'x': x, 'y': None, 'rotulo': rotulo, 'semana': s})
             continue
-        ponto = {'x': x, 'y': y(s['percentual']), 'rotulo': rotulo, 'semana': s}
+        ponto = {'x': x, 'y': y(s['percentual']), 'rotulo': rotulo, 'semana': s,
+                 'baixa': s['percentual'] < limiar_frequencia_baixa}
         pontos.append(ponto)
         atual.append(ponto)
     if atual:
@@ -38,7 +39,7 @@ def frequencia_semanal(semanas, meta):
         'dir': LARGURA - DIR,
         'base_y': ALTURA - BASE,
         'linhas_grade': [{'valor': v, 'y': y(v)} for v in (0, 25, 50, 100)],
-        'meta': {'valor': meta, 'y': y(meta)},
+        'linha_75': {'y': y(75)},
         'segmentos': [' '.join(f'{p["x"]},{p["y"]}' for p in seg) for seg in segmentos],
         'pontos': pontos,
         'meia_coluna': round(passo / 2, 2),

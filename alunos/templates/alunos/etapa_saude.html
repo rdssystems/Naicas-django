@@ -3,13 +3,12 @@
 {% block title %}Saúde de {{ aluno.nome }}{% endblock %}
 
 {% block content %}
-<a href="{% url 'alunos:detalhe' aluno.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ aluno.nome }}</a>
-<h1 class="h4 mt-2 mb-3">Ficha de saúde</h1>
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">Ficha de saúde</h1></header>
 
 {% include "alunos/_etapas_nav.html" %}
 
 <div class="alert alert-warning small">
-    <i class="bi bi-shield-lock"></i> <strong>Dado sensível (LGPD).</strong> Estas informações são visíveis só para a direção e a coordenação. Registre apenas o necessário para o cuidado do aluno.
+    <i class="bi bi-shield-lock"></i> <strong>Dado sensível (LGPD).</strong> Estas informações são visíveis só para a direção e a coordenação. Registre apenas o necessário para o cuidado do atendido.
 </div>
 
 <form method="post" novalidate>

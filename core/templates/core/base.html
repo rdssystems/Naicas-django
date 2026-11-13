@@ -13,131 +13,59 @@
     <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="{% static 'core/naicas.css' %}" rel="stylesheet">
+    <link href="{% static 'core/naicas.css' %}?v=20261112-3" rel="stylesheet">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100">
-    {% block navbar %}
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-naicas">
-        <div class="container-fluid">
-            {# Fita crepe com o nome da unidade: "onde você está", como a etiqueta da porta da sala. #}
-            <a class="navbar-brand" href="{% url 'core:home' %}" title="Início"><span class="fita">{{ active_escola.nome|default:"Naicas" }}</span></a>
-            {% if user.is_authenticated %}
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu" aria-controls="menu" aria-expanded="false" aria-label="Abrir menu">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="menu">
-                <ul class="navbar-nav me-auto">
-                    {% if is_diretor or is_coordenador %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard:painel' %}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-                    {% endif %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'core:home' %}">Início</a></li>
-                    {% if is_monitor %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'escalas:minha_semana' %}">Minha semana</a></li>
-                    {% endif %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'oficinas:lista' %}">{% if is_monitor %}Minhas oficinas{% else %}Oficinas{% endif %}</a></li>
-                    {% if is_diretor or is_coordenador %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'escalas:grade' %}">Escala</a></li>
-                    {% endif %}
-                    {% if is_diretor or is_coordenador %}
-                    <li class="nav-item"><a class="nav-link" href="{% url 'alunos:lista' %}">Alunos</a></li>
-                    {% endif %}
-                    {% if is_diretor %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Configurações</a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'escolas:lista' %}"><i class="bi bi-building"></i> Unidades</a></li>
-                            <li><a class="dropdown-item" href="{% url 'usuarios:lista' %}"><i class="bi bi-people"></i> Usuários</a></li>
-                            <li><a class="dropdown-item" href="{% url 'anexos:tipos' %}"><i class="bi bi-file-earmark-text"></i> Tipos de documento</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                </ul>
-                <ul class="navbar-nav">
-                    {% if is_diretor %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Trocar de unidade">
-                            <i class="bi bi-building"></i> {% if escola_em_foco %}Trocar unidade{% else %}Visão geral{% endif %}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><h6 class="dropdown-header">Ver dados de</h6></li>
-                            <li>
-                                <form method="post" action="{% url 'escolas:selecionar_foco' %}">
-                                    {% csrf_token %}
-                                    <button type="submit" name="escola" value="" class="dropdown-item{% if not escola_em_foco %} active{% endif %}"><i class="bi bi-globe2"></i> Visão geral da rede</button>
-                                </form>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            {% for unidade in unidades_para_foco %}
-                            <li>
-                                <form method="post" action="{% url 'escolas:selecionar_foco' %}">
-                                    {% csrf_token %}
-                                    <button type="submit" name="escola" value="{{ unidade.pk }}" class="dropdown-item{% if escola_em_foco.pk == unidade.pk %} active{% endif %}">{{ unidade.nome }}</button>
-                                </form>
-                            </li>
-                            {% empty %}
-                            <li><span class="dropdown-item-text small text-muted">Nenhuma unidade cadastrada.</span></li>
-                            {% endfor %}
-                        </ul>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle fs-5"></i>
-                            <span class="usuario-nav">
-                                <span>{{ user.get_full_name|default:user.username }}</span>
-                                {% if is_diretor %}<span class="cargo cargo-diretor">Diretor</span>
-                                {% elif is_coordenador %}<span class="cargo cargo-coordenador">Coordenador</span>
-                                {% elif is_monitor %}<span class="cargo cargo-monitor">Monitor</span>{% endif %}
-                            </span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><span class="dropdown-item-text small text-muted">
-                                {% if is_diretor %}Diretor{% if escola_em_foco %} · em {{ escola_em_foco.nome }}{% else %} · rede inteira{% endif %}{% elif is_coordenador %}Coordenador · {{ active_escola }}{% elif is_monitor %}Monitor{% endif %}
-                            </span></li>
-                            {% if user.is_staff %}
-                            <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="bi bi-gear"></i> Django Admin</a></li>
-                            {% endif %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form method="post" action="{% url 'usuarios:logout' %}">
-                                    {% csrf_token %}
-                                    <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right"></i> Sair</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
+    <div id="pagina-app" class="pagina-app d-flex flex-column flex-grow-1">
+        <a href="#conteudo-principal" class="visually-hidden-focusable p-3 bg-white">Ir para o conteúdo</a>
+        {% block navbar %}
+        <nav class="navbar navbar-dark navbar-naicas" aria-label="Barra principal">
+            <div class="container-fluid gap-3">
+                <a class="navbar-brand" href="{% url 'core:home' %}" title="Início"><span class="fita">{{ active_escola.nome|default:"Naicas" }}</span></a>
+                {% if user.is_authenticated %}
+                <button id="abrir-menu" class="btn botao-menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#menu-principal" aria-controls="menu-principal" aria-expanded="false" aria-label="Abrir menu">
+                    <i class="bi bi-list" aria-hidden="true"></i><span>Menu</span>
+                </button>
+                {% endif %}
+                {% if user.is_authenticated %}{% include "core/_menu_desktop.html" %}{% endif %}
             </div>
-            {% endif %}
+        </nav>
+        {% if escola_em_foco %}
+        <div class="faixa-foco">
+            <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+                <span class="small"><i class="bi bi-building" aria-hidden="true"></i> Você está dentro da unidade <strong>{{ escola_em_foco.nome }}</strong></span>
+                <form method="post" action="{% url 'escolas:selecionar_foco' %}" class="mb-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="escola" value="">
+                    <button type="submit" class="btn btn-outline-primary acao-retorno">Voltar à visão geral</button>
+                </form>
+            </div>
         </div>
-    </nav>
-    {% if escola_em_foco %}
-    <div class="faixa-foco small">
-        <div class="container-fluid d-flex flex-wrap justify-content-between align-items-center gap-2 py-1">
-            <span><i class="bi bi-building"></i> <span class="d-none d-md-inline">Você está dentro da unidade </span><strong>{{ escola_em_foco.nome }}</strong><span class="d-none d-md-inline">: oficinas, alunos e frequência mostram só ela.</span></span>
-            <form method="post" action="{% url 'escolas:selecionar_foco' %}" class="mb-0">
-                {% csrf_token %}
-                <input type="hidden" name="escola" value="">
-                <button type="submit" class="btn btn-sm btn-link p-0">Voltar à visão geral</button>
-            </form>
-        </div>
+        {% endif %}
+        {% endblock %}
+        <main id="conteudo-principal" class="container py-4 flex-grow-1" tabindex="-1">
+            {% block retorno_pagina %}
+            <nav class="barra-retorno mb-3" aria-label="Navegação da página">
+                {% if voltar_url %}
+                <a id="voltar-pagina" href="{{ voltar_url }}" class="btn btn-outline-primary acao-retorno" data-voltar data-historico="{{ voltar_historico|yesno:'true,false' }}" aria-label="Voltar à visualização anterior"><i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar</a>
+                {% else %}
+                <button id="voltar-pagina" type="button" class="btn btn-outline-primary acao-retorno" disabled aria-label="Voltar à visualização anterior"><i class="bi bi-arrow-left" aria-hidden="true"></i> Voltar</button>
+                {% endif %}
+            </nav>
+            {% endblock %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                </div>
+            {% endfor %}
+            {% block content %}{% endblock %}
+        </main>
     </div>
-    {% endif %}
-    {% endblock %}
-
-    <main class="container py-4 flex-grow-1">
-        {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-            </div>
-        {% endfor %}
-
-        {% block content %}{% endblock %}
-    </main>
-
+    {% if user.is_authenticated %}{% include "core/_menu_lateral.html" %}{% endif %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'core/navegacao.js' %}?v=20261112-3" defer></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

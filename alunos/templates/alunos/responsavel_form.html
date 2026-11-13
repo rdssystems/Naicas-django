@@ -3,14 +3,13 @@
 {% block title %}Editar responsável{% endblock %}
 
 {% block content %}
-<a href="{% url 'alunos:etapa_responsaveis' aluno.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Responsáveis de {{ aluno.nome }}</a>
-<h1 class="h4 mt-2 mb-3">Editar {{ vinculo.responsavel.nome }}</h1>
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">Editar {{ vinculo.responsavel.nome }}</h1></header>
 
 {% include "alunos/_etapas_nav.html" %}
 
 {% if outros_alunos %}
 <div class="alert alert-warning small">
-    <i class="bi bi-people"></i> Esta pessoa também é responsável por {{ outros_alunos }} outro{{ outros_alunos|pluralize }} aluno{{ outros_alunos|pluralize }} da rede.
+    <i class="bi bi-people"></i> Esta pessoa também é responsável por {{ outros_alunos }} outro{{ outros_alunos|pluralize }} atendido{{ outros_alunos|pluralize }} da rede.
     As alterações nos dados dela valem para todos. O grau de parentesco vale só para {{ aluno.nome }}.
 </div>
 {% endif %}

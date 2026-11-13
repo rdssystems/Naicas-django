@@ -1,10 +1,10 @@
 """
 Anexa PDFs FICTÍCIOS ("DOCUMENTO FICTÍCIO") aos tipos obrigatórios que faltam,
-para alunos de desenvolvimento ficarem com o cadastro completo. Só com DEBUG.
+para atendidos de desenvolvimento ficarem com o cadastro completo. Só com DEBUG.
 
 Uso:
     python manage.py popular_anexos --aluno 3 --aluno 4
-    python manage.py popular_anexos --ficticios     # alunos sem criado_por (gerados por popular_alunos)
+    python manage.py popular_anexos --ficticios     # atendidos sem criado_por (gerados por popular_alunos)
 """
 
 from django.conf import settings
@@ -44,8 +44,8 @@ class Command(BaseCommand):
     help = 'Anexa PDFs fictícios aos documentos obrigatórios pendentes (desenvolvimento).'
 
     def add_arguments(self, parser):
-        parser.add_argument('--aluno', type=int, action='append', default=[], help='ID do aluno (repetível).')
-        parser.add_argument('--ficticios', action='store_true', help='Alunos sem criado_por (gerados por comando).')
+        parser.add_argument('--aluno', type=int, action='append', default=[], help='ID do atendido (repetível).')
+        parser.add_argument('--ficticios', action='store_true', help='Atendidos sem criado_por (gerados por comando).')
 
     def handle(self, *args, aluno, ficticios, **options):
         if not settings.DEBUG:

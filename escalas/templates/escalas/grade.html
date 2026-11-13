@@ -1,39 +1,37 @@
 {% extends "core/base.html" %}
-
-{% block title %}Escala{% endblock %}
-
+{% block title %}Cronograma{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <div>
-        <h1 class="h4 mb-0">Escala dos monitores</h1>
-        <div class="small text-muted">{% if active_escola %}{{ active_escola }}{% else %}Rede inteira{% endif %} · oficinas abertas e em andamento</div>
-    </div>
-    <div class="dropdown">
-        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-calendar-plus"></i> Montar escala de…
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end" style="max-height: 60vh; overflow-y: auto;">
-            {% for monitor in monitores %}
-                <li><a class="dropdown-item" href="{% url 'escalas:monitor' monitor.pk %}">{{ monitor.get_full_name|default:monitor.username }}</a></li>
-            {% empty %}
-                <li><span class="dropdown-item-text small text-muted">Nenhum monitor ativo cadastrado.</span></li>
-            {% endfor %}
-        </ul>
-    </div>
+<div class="cabecalho-pagina d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div><h1 class="h4 mb-0">Cronograma das oficinas</h1><div class="small text-muted">{% if unidade_cronograma %}{{ unidade_cronograma }}{% elif active_escola %}{{ active_escola }}{% elif is_diretor %}Selecione um Naica e um turno{% else %}Rede inteira{% endif %} · programação semanal das turmas</div></div>
+    {% if is_diretor or is_coordenador %}<a href="{% url 'escalas:criar' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Vincular oficina</a>{% endif %}
 </div>
-
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-        <a class="nav-link{% if vista == 'agenda' %} active{% endif %}" href="?"{% if vista == 'agenda' %} aria-current="page"{% endif %}><i class="bi bi-calendar3-week"></i> Agenda</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link{% if vista == 'monitores' %} active{% endif %}" href="?vista=monitores"{% if vista == 'monitores' %} aria-current="page"{% endif %}><i class="bi bi-people"></i> Por monitor</a>
-    </li>
-</ul>
-
-{% if vista == 'agenda' %}
-    {% include "escalas/_agenda.html" %}
+{% if is_diretor %}
+<form method="get" class="filtros-pagina row g-2 align-items-end mb-3">
+    <div class="col-sm-6 col-lg-5">
+        <label for="{{ filtros_diretor.escola.id_for_label }}" class="form-label small">Naica</label>
+        {{ filtros_diretor.escola }}
+        {% for erro in filtros_diretor.escola.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <label for="{{ filtros_diretor.turno.id_for_label }}" class="form-label small">Turno</label>
+        {{ filtros_diretor.turno }}
+        {% for erro in filtros_diretor.turno.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
+    </div>
+    <div class="col-lg-auto"><button type="submit" class="btn btn-outline-primary">Filtrar</button></div>
+</form>
+{% if agenda %}
+{% include "escalas/_agenda.html" %}
 {% else %}
-    {% include "escalas/_por_monitor.html" %}
+<div class="alert alert-light border">Selecione o Naica e o turno para visualizar as oficinas da semana.</div>
+{% endif %}
+{% else %}
+<form method="get" class="filtros-pagina d-flex flex-wrap align-items-center gap-2 mb-3">
+    <label for="turma" class="small">Turma</label>
+    <select name="turma" id="turma" class="form-select form-select-sm w-auto"><option value="">Todas as turmas</option>{% for valor, rotulo in turmas %}<option value="{{ valor }}" {% if turma == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
+    <label for="turno" class="small">Turno</label>
+    <select name="turno" id="turno" class="form-select form-select-sm w-auto"><option value="">Todos os turnos</option>{% for valor, rotulo in turnos %}<option value="{{ valor }}" {% if turno == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
+    <button type="submit" class="btn btn-sm btn-outline-primary">Filtrar</button>
+</form>
+{% include "escalas/_agenda.html" %}
 {% endif %}
 {% endblock %}

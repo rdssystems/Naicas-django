@@ -1,66 +1,13 @@
 {% extends "core/base.html" %}
-
-{% block title %}Matrículas de {{ aluno.nome }}{% endblock %}
-
+{% block title %}Cronograma de {{ aluno.nome }}{% endblock %}
 {% block content %}
-<a href="{% url 'alunos:detalhe' aluno.pk %}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ aluno.nome }}</a>
-<h1 class="h4 mt-2 mb-3">Matrícula</h1>
-
+<header class="cabecalho-pagina mb-4"><h1 class="h4 mb-0">Cronograma da turma</h1></header>
 {% include "alunos/_etapas_nav.html" %}
-
-{% if not aluno.cadastro_completo %}
-<div class="alert alert-warning small"><i class="bi bi-info-circle"></i> O cadastro deste aluno está incompleto. A matrícula é permitida, mas complete as etapas pendentes assim que possível.</div>
-{% endif %}
-
-<div class="card shadow-sm mb-3">
-    <div class="card-body">
-        <h2 class="h6 text-uppercase text-muted mb-3">Oficinas do aluno</h2>
-        {% for item in matriculas %}
-            {% with m=item.matricula %}
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom py-2">
-                <div>
-                    <span class="fw-semibold">{{ m.oficina.nome }}</span> {% include "matriculas/_situacao_badge.html" with matricula=m %}
-                    <div class="small text-muted">{{ m.escola }} · {{ m.oficina.dias_semana_display }} {{ m.oficina.horario|time:"H:i" }}–{{ m.oficina.horario_fim|time:"H:i" }} · inscrito em {{ m.data_inscricao|date:"d/m/Y" }}</div>
-                </div>
-                {% if item.pode_gerenciar and m.status == 'CURSANDO' %}{% include "matriculas/_acoes_matricula.html" with matricula=m %}{% endif %}
-            </div>
-            {% endwith %}
-        {% empty %}
-            <p class="small text-muted mb-0">Ainda não matriculado em nenhuma oficina (fila de espera).</p>
-        {% endfor %}
-    </div>
-</div>
-
-<div class="card shadow-sm">
-    <div class="card-body">
-        <h2 class="h6 text-uppercase text-muted mb-3">Matricular em uma oficina</h2>
-        {% if opcoes %}
-        <div class="list-group">
-            {% for opcao in opcoes %}
-            {% with o=opcao.oficina %}
-            <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <div>
-                    <div class="fw-semibold">{{ o.nome }}{% if is_diretor %} <span class="text-muted fw-normal">· {{ o.escola }}</span>{% endif %}</div>
-                    <div class="small text-muted">{{ o.dias_semana_display }} · {{ o.horario|time:"H:i" }}–{{ o.horario_fim|time:"H:i" }} · {{ o.data_inicio|date:"d/m/Y" }} a {{ o.data_fim|date:"d/m/Y" }}</div>
-                    {% if opcao.conflitos %}
-                        <div class="small text-danger"><i class="bi bi-clock-history"></i> Choque de horário com {% for c in opcao.conflitos %}"{{ c.oficina.nome }}"{% if not forloop.last %}, {% endif %}{% endfor %}</div>
-                    {% endif %}
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge {% if opcao.vagas_livres %}text-bg-light border{% else %}text-bg-danger{% endif %}">{% if opcao.vagas_livres %}{{ opcao.vagas_livres }} vaga{{ opcao.vagas_livres|pluralize }}{% else %}Lotada{% endif %}</span>
-                    <form method="post" class="mb-0">
-                        {% csrf_token %}
-                        <input type="hidden" name="oficina" value="{{ o.pk }}">
-                        <button type="submit" class="btn btn-sm btn-primary" {% if not opcao.vagas_livres or opcao.conflitos %}disabled{% endif %}>Matricular</button>
-                    </form>
-                </div>
-            </div>
-            {% endwith %}
-            {% endfor %}
-        </div>
-        {% else %}
-            <p class="small text-muted mb-0">Nenhuma oficina aberta disponível{% if is_coordenador %} na sua unidade{% endif %}.</p>
-        {% endif %}
-    </div>
-</div>
+<p class="text-muted">{{ aluno.escola }} · {{ aluno.get_turno_display }} · {{ aluno.get_turma_display }}</p>
+{% if not aluno.turno or not aluno.turma %}<div class="alert alert-warning">Defina o turno e a turma nos dados do atendido para consultar o cronograma.</div>{% endif %}
+<div class="card shadow-sm"><ul class="list-group list-group-flush">
+{% for oficina in oficinas %}
+    <li class="list-group-item py-3"><a href="{% url 'escalas:detalhe' oficina.pk %}" class="fw-semibold text-decoration-none">{{ oficina.nome }}</a><div class="small text-muted">{{ oficina.dias_semana_display }} · {{ oficina.horario|time:"H:i" }}–{{ oficina.horario_fim|time:"H:i" }}</div></li>
+{% empty %}<li class="list-group-item text-muted">Nenhuma oficina vinculada a esta turma e turno.</li>{% endfor %}
+</ul></div>
 {% endblock %}

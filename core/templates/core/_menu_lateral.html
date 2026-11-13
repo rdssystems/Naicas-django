@@ -1,0 +1,49 @@
+<aside class="offcanvas offcanvas-start menu-lateral" tabindex="-1" id="menu-principal" aria-labelledby="titulo-menu" data-bs-backdrop="true" data-bs-scroll="false" data-bs-keyboard="true">
+    <div class="offcanvas-header">
+        <h2 class="offcanvas-title h5 mb-0" id="titulo-menu">Menu</h2>
+        <button type="button" class="btn menu-fechar" data-bs-dismiss="offcanvas" aria-label="Fechar menu"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="menu-identificacao">
+            <span class="menu-usuario">{{ user.get_full_name|default:user.username }}</span>
+            {% if is_diretor %}<span class="cargo cargo-diretor">Diretor</span>
+            {% elif is_coordenador %}<span class="cargo cargo-coordenador">Coordenador</span>
+            {% elif is_monitor %}<span class="cargo cargo-monitor">Monitor</span>{% endif %}
+            <span class="small text-muted">{% if active_escola %}{{ active_escola.nome }}{% else %}Rede Naica{% endif %}</span>
+        </div>
+        <nav aria-label="Navegação principal" class="menu-secao">
+            <ul class="nav flex-column menu-links">
+                {% include "core/_links_principais.html" %}
+            </ul>
+        </nav>
+        {% if is_diretor %}
+        <nav class="menu-secao" aria-labelledby="menu-configuracoes">
+            <h3 class="menu-titulo" id="menu-configuracoes">Configurações</h3>
+            <ul class="nav flex-column menu-links">
+                <li class="nav-item"><a class="nav-link{% if request.resolver_match.namespace == 'escolas' %} active{% endif %}" href="{% url 'escolas:lista' %}"{% if request.resolver_match.namespace == 'escolas' %} aria-current="page"{% endif %}>Unidades</a></li>
+                <li class="nav-item"><a class="nav-link{% if request.resolver_match.namespace == 'usuarios' %} active{% endif %}" href="{% url 'usuarios:lista' %}"{% if request.resolver_match.namespace == 'usuarios' %} aria-current="page"{% endif %}>Usuários</a></li>
+                <li class="nav-item"><a class="nav-link{% if request.resolver_match.namespace == 'anexos' and request.resolver_match.url_name != 'aluno' %} active{% endif %}" href="{% url 'anexos:tipos' %}">Tipos de documento</a></li>
+            </ul>
+        </nav>
+        <section class="menu-secao" aria-labelledby="menu-unidade">
+            <h3 class="menu-titulo" id="menu-unidade">Unidade em visualização</h3>
+            <form method="post" action="{% url 'escolas:selecionar_foco' %}">
+                {% csrf_token %}
+                <label for="menu-escola" class="visually-hidden">Selecionar unidade</label>
+                <select name="escola" id="menu-escola" class="form-select mb-2">
+                    <option value=""{% if not escola_em_foco %} selected{% endif %}>Visão geral da rede</option>
+                    {% for unidade in unidades_para_foco %}<option value="{{ unidade.pk }}"{% if escola_em_foco.pk == unidade.pk %} selected{% endif %}>{{ unidade.nome }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="btn btn-outline-primary w-100">Aplicar unidade</button>
+            </form>
+        </section>
+        {% endif %}
+        {% if user.is_staff %}<a class="menu-admin" href="{% url 'admin:index' %}"><i class="bi bi-gear" aria-hidden="true"></i> Django Admin</a>{% endif %}
+    </div>
+    <div class="menu-rodape">
+        <button type="button" class="btn btn-primary w-100" data-bs-dismiss="offcanvas">Voltar à página</button>
+        <form method="post" action="{% url 'usuarios:logout' %}" class="mt-2">
+            {% csrf_token %}<button type="submit" class="btn btn-link w-100">Sair da conta</button>
+        </form>
+    </div>
+</aside>
