@@ -2,8 +2,16 @@
 # Atualiza o checkout da VPS a partir de origin/main, preservando dados locais.
 set -Eeuo pipefail
 
+main() {
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
+
+AUTO_UPDATE=0
+case "${1:-}" in
+    '') ;;
+    --auto) AUTO_UPDATE=1 ;;
+    *) printf 'Uso: bash script.sh [--auto]\n' >&2; exit 2 ;;
+esac
 
 BRANCH="${DEPLOY_BRANCH:-main}"
 KEEP_BACKUPS="${KEEP_BACKUPS:-10}"
@@ -11,7 +19,7 @@ BACKUP_DIR="${BACKUP_DIR:-$ROOT_DIR/backups}"
 DB_CONTAINER="${DB_CONTAINER:-naicas-db}"
 WEB_PORT="${WEB_PORT:-}"
 HEALTHCHECK_HOST="${HEALTHCHECK_HOST:-}"
-STAMP="$(date +%Y%m%d_%H%M%S)"
+STAMP="$(date +%Y%m%d_%H%M%S)_$$"
 BACKUP_CONTAINER_FILE=""
 
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
@@ -39,17 +47,39 @@ done
 [[ "$KEEP_BACKUPS" =~ ^[1-9][0-9]*$ ]] || fail 'KEEP_BACKUPS deve ser um inteiro maior que zero.'
 
 exec 9>"$ROOT_DIR/.deploy.lock"
-flock -n 9 || fail 'Já existe outra atualização em andamento.'
+if ! flock -n 9; then
+    [[ "$AUTO_UPDATE" -eq 1 ]] && exit 0
+    fail 'Já existe outra atualização em andamento.'
+fi
 
 CURRENT_BRANCH="$(git branch --show-current)"
 [[ "$CURRENT_BRANCH" == "$BRANCH" ]] || fail "O checkout está na branch '$CURRENT_BRANCH'; esperado: '$BRANCH'."
 [[ -z "$(git status --porcelain --untracked-files=no)" ]] || \
     fail 'Há alterações locais em arquivos rastreados. Faça commit ou descarte-as antes do deploy.'
 
+log "Buscando origin/$BRANCH..."
+GIT_TERMINAL_PROMPT=0 git fetch --prune origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+OLD_REV="$(git rev-parse HEAD)"
+REMOTE_REV="$(git rev-parse "origin/$BRANCH")"
+DEPLOY_STATE="$(git rev-parse --git-path naicas-last-deploy)"
+
+if ! git merge-base --is-ancestor "$OLD_REV" "$REMOTE_REV"; then
+    fail "A branch local divergiu de origin/$BRANCH. Nenhum reset foi feito."
+fi
+
+# O timer consulta o Git sem reconstruir/reiniciar um deploy já concluído.
+# Se a execução anterior falhou após o merge, tenta novamente a mesma revisão.
+if [[ "$AUTO_UPDATE" -eq 1 && "$OLD_REV" == "$REMOTE_REV" && -f "$DEPLOY_STATE" ]] && \
+    [[ "$(cat "$DEPLOY_STATE")" == "$OLD_REV" ]]; then
+    log 'Nenhuma atualização pendente.'
+    exit 0
+fi
+
 if docker info >/dev/null 2>&1; then
     DOCKER=(docker)
     DOCKER_USE_SUDO=0
 else
+    [[ "$AUTO_UPDATE" -eq 0 ]] || fail 'O serviço automático precisa de acesso ao socket do Docker. Execute instalar_auto_update.sh.'
     command -v sudo >/dev/null 2>&1 || fail 'Docker não está acessível e sudo não está disponível.'
     log 'Solicitando acesso ao Docker via sudo.'
     sudo -v
@@ -65,15 +95,6 @@ cleanup_container_dump() {
 }
 trap cleanup_container_dump EXIT
 
-log "Buscando origin/$BRANCH..."
-git fetch --prune origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
-OLD_REV="$(git rev-parse HEAD)"
-REMOTE_REV="$(git rev-parse "origin/$BRANCH")"
-
-if ! git merge-base --is-ancestor "$OLD_REV" "$REMOTE_REV"; then
-    fail "A branch local divergiu de origin/$BRANCH. Nenhum reset foi feito."
-fi
-
 if [[ "$OLD_REV" != "$REMOTE_REV" ]]; then
     mkdir -p "$BACKUP_DIR"
     BACKUP_FILE="$BACKUP_DIR/pre_update_${STAMP}.dump"
@@ -81,7 +102,7 @@ if [[ "$OLD_REV" != "$REMOTE_REV" ]]; then
 
     log "Criando backup do PostgreSQL em $BACKUP_FILE..."
     "${DOCKER[@]}" exec "$DB_CONTAINER" sh -c \
-        'umask 077; pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB" > "$1" && test -s "$1"' \
+        'umask 077; pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB" > "$1" && test -s "$1" && pg_restore --list "$1" >/dev/null' \
         sh "$BACKUP_CONTAINER_FILE"
     "${DOCKER[@]}" cp "$DB_CONTAINER:$BACKUP_CONTAINER_FILE" "$BACKUP_FILE"
     if [[ "$DOCKER_USE_SUDO" -eq 1 ]]; then
@@ -116,7 +137,7 @@ for attempt in $(seq 1 30); do
 done
 
 if [[ "$READY" -ne 1 ]]; then
-    fail 'A aplicação não respondeu em 60s. Consulte os logs do contêiner naicas-app. O backup pré-atualização foi preservado.'
+    fail 'A aplicação não respondeu após 30 tentativas. Consulte os logs do contêiner naicas-app. O backup pré-atualização foi preservado.'
 fi
 
 if [[ -d "$BACKUP_DIR" ]]; then
@@ -129,4 +150,11 @@ if [[ -d "$BACKUP_DIR" ]]; then
     done
 fi
 
+printf '%s\n' "$(git rev-parse HEAD)" > "${DEPLOY_STATE}.tmp"
+mv -f -- "${DEPLOY_STATE}.tmp" "$DEPLOY_STATE"
 log "Deploy concluído na revisão $(git rev-parse --short HEAD)."
+}
+
+# Carregar a função inteira evita ler trechos diferentes deste arquivo enquanto
+# o próprio checkout é atualizado pelo git merge.
+main "$@"

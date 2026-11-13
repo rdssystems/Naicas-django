@@ -1,4 +1,5 @@
 from django.contrib.staticfiles.storage import staticfiles_storage
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
@@ -22,3 +23,20 @@ def favicon(request):
     """/favicon.ico pedido direto pelo navegador (admin, PDFs abertos no navegador etc.)."""
     # 302, não 301: em produção a URL tem hash e muda se o ícone mudar.
     return redirect(staticfiles_storage.url('core/favicon.ico'))
+
+
+def service_worker(request):
+    """Service worker de rede apenas, para instalar sem guardar telas/dados pessoais."""
+    response = HttpResponse(
+        "self.addEventListener('fetch', (event) => {"
+        " if (event.request.method !== 'GET') return;"
+        " const url = new URL(event.request.url);"
+        " if (url.origin === self.location.origin) {"
+        " event.respondWith(fetch(event.request));"
+        " }"
+        "});",
+        content_type='application/javascript; charset=utf-8',
+    )
+    response['Service-Worker-Allowed'] = '/'
+    response['Cache-Control'] = 'no-cache'
+    return response

@@ -1,10 +1,12 @@
 {% extends "core/base.html" %}
+{% load static %}
 {% load widget_tweaks %}
 
 {% block title %}Entrar{% endblock %}
 
 {# Sem barra do topo: a fita grande do cabeçalho já faz o papel da marca. #}
 {% block navbar %}{% endblock %}
+{% block retorno_pagina %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -34,6 +36,13 @@
             </div>
         </div>
         <p class="small text-muted text-center mt-3">Esqueceu a senha? Fale com a direção da rede.</p>
+        <button id="instalar-pwa" type="button" class="btn btn-outline-primary w-100 mt-2" hidden>
+            <i class="bi bi-download" aria-hidden="true"></i> Instalar Naicas neste tablet
+        </button>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/pwa.js' %}?v=20261113-1" defer></script>
 {% endblock %}
