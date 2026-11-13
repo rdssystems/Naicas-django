@@ -187,6 +187,8 @@ A revisão concluída fica em `.git/naicas-last-deploy`. Consultas sem novidades
 
 ## Histórico
 
+- **2026-11-13** — Ajustes de compatibilidade durante a ativação no ZimaOS: caminho absoluto sem aspas em `WorkingDirectory` do systemd e retenção por glob Bash ordenado pelos timestamps, sem `find -printf` (ausente no BusyBox). Acrescentado cenário de retenção de backups aos testes isolados. Deploy inicial de login/PWA concluído com backup e aplicação respondendo.
+
 - **2026-11-13** — A pedido do usuário após tornar o repositório público, automatizado o deploy da VPS pela consulta de `origin/main` a cada minuto usando systemd. Incluídos instalador, execução sem interação, lock, registro da última revisão concluída e repetição após falha; consultas sem alterações não reiniciam o app. Backup validado antes de avançar commits, com retenção de dez cópias. Serviço com o usuário do checkout e grupo Docker apenas na unidade. Escolhida consulta pela própria VPS por seu endereço Tailscale, dispensando acesso de entrada e credenciais SSH no GitHub. Publicadas junto as alterações pendentes do login e PWA. Sete cenários isolados aprovados: primeiro deploy, ausência de novidades, atualização com backup/self-update, repetição após falha de build, lock concorrente, arquivo local alterado e branch divergente. Sintaxe Bash, sintaxe JS, check do Django no contêiner local e diff validados.
 
 - **2026-11-13** — Removido o controle de retorno da tela de login. Configurado PWA instalável com manifest, ícones próprios 192/512, service worker na raiz com estratégia somente de rede (sem cache de conteúdo autenticado) e botão de instalação no login para navegadores compatíveis. Instalação depende de HTTPS, salvo acesso por `localhost`.

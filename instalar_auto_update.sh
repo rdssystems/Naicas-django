@@ -39,7 +39,7 @@ Requires=docker.service
 Type=oneshot
 User=$DEPLOY_USER
 SupplementaryGroups=$DOCKER_GID
-WorkingDirectory="$ROOT_DIR"
+WorkingDirectory=$ROOT_DIR
 ExecStart=$BASH_BIN "$ROOT_DIR/script.sh" --auto
 Environment=GIT_TERMINAL_PROMPT=0
 UMask=0077

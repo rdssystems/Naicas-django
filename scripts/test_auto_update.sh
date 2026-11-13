@@ -84,6 +84,14 @@ printf 'PASS: falha no build não marca sucesso; a próxima consulta tenta novam
 [[ ! -s "$DOCKER_LOG" ]]
 printf 'PASS: consulta simultânea respeita o lock e sai sem erro.\n'
 
+for index in {01..12}; do printf 'antigo\n' > "backups/pre_update_20000101_0000${index}.dump"; done
+KEEP_BACKUPS=3 bash ./script.sh > "$FIXTURE/run.log" 2>&1
+REMAINING_BACKUPS=(backups/pre_update_*.dump)
+[[ "${#REMAINING_BACKUPS[@]}" -eq 3 ]]
+[[ "${REMAINING_BACKUPS[-1]}" != *20000101* ]]
+printf 'PASS: retenção remove cópias antigas sem depender de find -printf.\n'
+
+: > "$DOCKER_LOG"
 printf 'edição local\n' >> release.txt
 expect_failure
 [[ ! -s "$DOCKER_LOG" ]]

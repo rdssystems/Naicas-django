@@ -141,13 +141,18 @@ if [[ "$READY" -ne 1 ]]; then
 fi
 
 if [[ -d "$BACKUP_DIR" ]]; then
-    mapfile -t OLD_BACKUPS < <(
-        find "$BACKUP_DIR" -maxdepth 1 -type f -name 'pre_update_*.dump' -printf '%T@ %p\n' |
-            sort -nr | awk -v keep="$KEEP_BACKUPS" 'NR > keep {sub(/^[^ ]+ /, ""); print}'
-    )
-    for old_backup in "${OLD_BACKUPS[@]}"; do
-        rm -f -- "$old_backup"
+    # Os nomes começam pelo timestamp, então o glob já traz a ordem cronológica.
+    # Não depende de find -printf (indisponível no BusyBox do ZimaOS).
+    BACKUPS=()
+    for backup in "$BACKUP_DIR"/pre_update_*.dump; do
+        [[ ! -f "$backup" ]] || BACKUPS+=("$backup")
     done
+    EXCESS_BACKUPS=$(( ${#BACKUPS[@]} - KEEP_BACKUPS ))
+    if [[ "$EXCESS_BACKUPS" -gt 0 ]]; then
+        for old_backup in "${BACKUPS[@]:0:$EXCESS_BACKUPS}"; do
+            rm -f -- "$old_backup"
+        done
+    fi
 fi
 
 printf '%s\n' "$(git rev-parse HEAD)" > "${DEPLOY_STATE}.tmp"
