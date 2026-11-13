@@ -88,6 +88,7 @@ else
 fi
 
 compose() { "${DOCKER[@]}" compose "$@"; }
+compose version >/dev/null || fail 'O plugin Docker Compose não está acessível. Confira DOCKER_CONFIG e a instalação do serviço.'
 cleanup_container_dump() {
     if [[ -n "$BACKUP_CONTAINER_FILE" ]]; then
         "${DOCKER[@]}" exec "$DB_CONTAINER" rm -f "$BACKUP_CONTAINER_FILE" >/dev/null 2>&1 || true
@@ -128,8 +129,9 @@ compose up -d --build
 log 'Aguardando a aplicação responder...'
 READY=0
 for attempt in $(seq 1 30); do
-    if curl -fsS --max-time 5 -o /dev/null \
-        -H "Host: $HEALTHCHECK_HOST" "http://127.0.0.1:${WEB_PORT}/"; then
+    if HTTP_STATUS="$(curl -fsS --max-time 5 -o /dev/null -w '%{http_code}' \
+        -H "Host: $HEALTHCHECK_HOST" -H 'X-Forwarded-Proto: https' \
+        "http://127.0.0.1:${WEB_PORT}/usuarios/login/")" && [[ "$HTTP_STATUS" == 200 ]]; then
         READY=1
         break
     fi

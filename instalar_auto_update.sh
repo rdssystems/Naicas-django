@@ -11,7 +11,7 @@ BASH_BIN="$(command -v bash)"
     printf 'Execute como o dono do checkout, sem sudo: bash instalar_auto_update.sh\n' >&2
     exit 1
 }
-for command in sudo systemctl systemd-analyze docker stat getent install; do
+for command in sudo systemctl systemd-analyze docker git stat getent install; do
     command -v "$command" >/dev/null || { printf 'Comando obrigatório ausente: %s\n' "$command" >&2; exit 1; }
 done
 [[ -S /var/run/docker.sock ]] || { printf 'Socket /var/run/docker.sock não encontrado.\n' >&2; exit 1; }
@@ -24,6 +24,10 @@ DOCKER_GID="$(command stat -c '%g' /var/run/docker.sock)"
 [[ "$DOCKER_GID" -ne 0 ]] || { printf 'O socket Docker precisa de um grupo dedicado, como docker.\n' >&2; exit 1; }
 getent group "$DOCKER_GID" >/dev/null
 bash -n "$ROOT_DIR/script.sh"
+# O HOME do usuário no ZimaOS é /DATA; a configuração Docker global pode ser
+# ilegível. Um diretório próprio mantém a descoberta dos plugins Compose/Buildx.
+DOCKER_CONFIG_DIR="$(git -C "$ROOT_DIR" rev-parse --absolute-git-dir)/naicas-docker"
+mkdir -p "$DOCKER_CONFIG_DIR"
 sudo -v
 
 UNIT_DIR="$(mktemp -d)"
@@ -42,6 +46,7 @@ SupplementaryGroups=$DOCKER_GID
 WorkingDirectory=$ROOT_DIR
 ExecStart=$BASH_BIN "$ROOT_DIR/script.sh" --auto
 Environment=GIT_TERMINAL_PROMPT=0
+Environment="DOCKER_CONFIG=$DOCKER_CONFIG_DIR"
 UMask=0077
 NoNewPrivileges=true
 TimeoutStartSec=30min

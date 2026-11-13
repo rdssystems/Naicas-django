@@ -14,7 +14,8 @@ printf '%s\n' "$*" >> "$DOCKER_LOG"
 if [[ "$1" == cp ]]; then printf 'backup simulado\n' > "$3"; fi
 if [[ "$1 $2" == 'compose up' && "${FAKE_COMPOSE_FAIL:-0}" == 1 ]]; then exit 1; fi
 EOF
-printf '#!/usr/bin/env bash\nexit 0\n' > "$FIXTURE/bin/curl"
+printf '#!/usr/bin/env bash\nprintf "%%s" "${FAKE_HTTP_STATUS:-200}"\n' > "$FIXTURE/bin/curl"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$FIXTURE/bin/sleep"
 chmod +x "$FIXTURE/bin/"*
 export PATH="$FIXTURE/bin:$PATH"
 
@@ -74,6 +75,16 @@ run_auto
 grep -q '^compose up' "$DOCKER_LOG"
 [[ "$(cat .git/naicas-last-deploy)" == "$(git rev-parse HEAD)" ]]
 printf 'PASS: falha no build não marca sucesso; a próxima consulta tenta novamente.\n'
+
+PREVIOUS_SUCCESS="$(cat .git/naicas-last-deploy)"
+publish release-healthcheck
+export FAKE_HTTP_STATUS=301
+expect_failure
+[[ "$(cat .git/naicas-last-deploy)" == "$PREVIOUS_SUCCESS" ]]
+unset FAKE_HTTP_STATUS
+run_auto
+[[ "$(cat .git/naicas-last-deploy)" == "$(git rev-parse HEAD)" ]]
+printf 'PASS: redirecionamento HTTPS não conta como aplicação pronta; exige HTTP 200 no login.\n'
 
 : > "$DOCKER_LOG"
 (
