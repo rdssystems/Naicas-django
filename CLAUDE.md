@@ -178,7 +178,7 @@ docker compose exec web python manage.py popular_demo [--seed 2026]   # randomiz
 
 ## Deploy
 
-`atualizar.sh` na VPS: backup opcional → `git reset --hard origin/main` → `docker compose up -d --build` → healthcheck com header `Host` = `HEALTHCHECK_HOST`. Domínio/VPS só serão definidos após o MVP.
+Na VPS, executar `bash script.sh` (ou o alias legado `bash atualizar.sh`) para sincronizar o checkout com `origin/main`, criar backup automático do PostgreSQL antes de avançar commits, reconstruir o Compose e conferir o healthcheck. O deploy só aceita avanço fast-forward e aborta se houver alterações em arquivos rastreados; preserva `.env`, volumes, mídia e arquivos locais. Cada hospedagem mantém seu `.env` e volumes próprios, mas deve acompanhar a mesma branch `main`.
 
 ## Histórico
 

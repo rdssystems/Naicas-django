@@ -38,6 +38,7 @@ media/
 *.sql
 *.bak
 backups/
+.deploy.lock
 *.csv
 *.xlsx
 
